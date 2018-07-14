@@ -1,0 +1,404 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r libraries}
+library(cluster)
+library(mclust)
+library(lattice)
+library(tidyverse)
+library(maptree)
+library(mice)
+library(magrittr)
+library(mclust)
+library(mice)
+library(nFactors)
+library(poLCA)
+library(Rtsne)
+```
+
+# Utility Functions
+```{r}
+utility_histogramplotter <- function(x) {
+  lattice::histogram( ~ x)
+}
+seg.summ <- function(data, groups) {
+  aggregate(data, list(groups), function(x) mean(as.numeric(x)))
+}
+plot_bi_plots <- function(df, y,...) {
+  old.par = par()
+  par(mar=c(5,4,5,2))
+  on.exit(expr = 'par = old.par')
+  prcomp(df) %>% biplot(col = c('gray', 'red'), cex = .8, main = y, ...)
+}
+adjust_q13 <- function(df){
+  df %<>% 
+    mutate(q13_social= (q13r1+q13r2+q13r3+q13r10+q13r11)/5,
+           q13_music = (q13r4+q13r7+q13r8+q13r9)/4,
+           q13_video = (q13r5+q13r6+q13r12)/3)
+  df[,!str_detect(names(df),'q13r')]
+}
+adjust_q24 <- function(df){
+  df %<>% 
+    mutate(
+      q24_posatt = (q24r1+q24r2+q24r3+q24r5+q24r6)/5,
+      q24_entert = (q24r7+q24r9)/2,
+      q24_commun = (q24r10+q24r11)/2,
+      q24_negatv = (q24r4+q24r9+q24r12)/3
+    )
+  df[,!str_detect(names(df),'q24r')]
+}
+adjust_q25 <- function(df){
+  df %<>% 
+    mutate(
+      q25_leader = (q25r1+q25r2+q25r3+q25r5+q25r5)/5,
+      q25_contrl = (q25r7+q25r8)/2,
+      q25_drive  = (q25r9+q25r10+q25r11)/3,
+      q25_negatv = (q25r6+q25r12)/2
+    )
+  df[,!str_detect(names(df),'q25r')]
+}
+adjust_q26 <- function(df){
+  df %<>% 
+    mutate(
+      q26_bargain =  (q26r3+q26r5)/2,
+      q26_brands = (q26r18+q26r7+q26r13+q26r14+q26r15)/5,
+      q26_earn2spend = (q26r13+q26r16+q26r4)/2,
+      q26_applover = (q26r17+q26r12+q26r10+q26r8+q26r6+q26r9)/5,
+      q26_children = q26r11,
+    )
+  df[,!str_detect(names(df),'q26r')]
+}
+adjust_q2 <- function(df){
+  df %<>%
+    mutate(
+      q2_apple = ifelse(q2r1==1|q2r2==1,1,0),
+      q2_andriod = q2r3,
+      q2_windows = q2r6,
+      q2_tablet = q2r8,
+      q2_other = ifelse(q2r4==1|q2r5==1|q2r7==1|q2r9==1,1,0)
+    )
+  df[,!str_detect(names(df),'q2r')]
+}
+adjust_q4 <- function(df){
+    df %<>%
+    mutate(
+      q4_music=q4r1,
+      q4_tv=ifelse(q4r2==1|q4r3==1|q4r4==1,1,0),
+      q4_game=q4r5,
+      q4_social=q4r6,
+      q4_news=ifelse(q4r7==1|q4r9==1,1,0),
+      q4_shop=q4r8,
+      q4_none=q4r11
+    )
+  df[,!str_detect(names(df),'q4r')]
+}
+adjust_names <- function(df){
+  df %>% 
+    dplyr::rename(
+      q1_age=q1,
+      q11_appnum = q11,
+      q12_freeapppc = q12,
+      q48_edu = q48,
+      q49_marital = q49,
+      q54_race = q54,
+      q55_latino = q55,
+      q56_income = q56,
+      q57_mf = q57
+    )
+}
+```
+
+
+# Data Prep
+```{r}
+load('../data/apphappyData.RData')
+df_labs <- tbl_df(apphappy.3.labs.frame)
+df_nums <- tbl_df(apphappy.3.num.frame)
+df_labs$q57 <- as.factor(df_labs$q57)
+df_labs$caseID <- NULL
+df_nums$caseID <- NULL
+df_labs$q2r10 <- NULL
+df_nums$q2r10 <- NULL
+df_labs$q5r1 <- NULL
+df_nums$q5r1 <- NULL
+```
+
+<!-- # EDA -->
+
+<!-- ## Summaries -->
+
+<!-- ```{r} -->
+<!-- glimpse(df_labs) -->
+<!-- skimr::skim(df_labs) -->
+<!-- ``` -->
+
+<!-- ## Age -->
+
+<!-- ```{r} -->
+<!-- histogram(~q1, df_labs) -->
+<!-- ``` -->
+
+<!-- ## How many apps? -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% dplyr::select(contains('q11')) %>% lattice::histogram(~q11,.) -->
+<!-- ``` -->
+
+<!-- ## PC free? -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% dplyr::select(contains('q12')) %>% lattice::histogram(~q12,.) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- xtabs(formula = ~q11+q12,data = df_labs) -->
+<!-- ``` -->
+
+
+<!-- ## Website visits -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% select(contains('q13r')) %>% map(~utility_histogramplotter(.x)) -->
+<!-- ``` -->
+<!-- ## Q24 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% select(contains('q24r')) %>% map(~utility_histogramplotter(.x)) -->
+<!-- df_labs %>% select(contains('q24r')) %>% map_df(~as.numeric(.x)) %>% cor() %>% corrplot::corrplot(order = 'hclust') -->
+<!-- ``` -->
+<!-- ## Q25 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% select(contains('q25r')) %>% map(~utility_histogramplotter(.x)) -->
+<!-- df_labs %>% select(contains('q25r')) %>% map_df(~as.numeric(.x)) %>% cor() %>% corrplot::corrplot(order = 'hclust') -->
+<!-- ``` -->
+
+<!-- ## Q26 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% select(contains('q26r')) %>% map(~utility_histogramplotter(.x)) -->
+<!-- df_labs %>% select(contains('q26r')) %>% map_df(~as.numeric(.x)) %>% cor() %>% corrplot::corrplot(order = 'hclust') -->
+<!-- ``` -->
+
+<!-- ## Q5 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% dplyr::select(contains('q5r1')) %>% lattice::histogram(~q5r1,.,scales=list(x=list(rot=30))) -->
+<!-- ``` -->
+
+<!-- ## Q48 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% dplyr::select(contains('q48')) %>% lattice::histogram(~q48,.,scales=list(x=list(rot=30))) -->
+<!-- ``` -->
+
+<!-- ## Q49 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% dplyr::select(contains('q49')) %>% lattice::histogram(~q49,.,scales=list(x=list(rot=30))) -->
+<!-- ``` -->
+
+<!-- ## Q50 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% select(contains('q50r')) %>% map(~utility_histogramplotter(.x)) -->
+<!-- ``` -->
+
+<!-- ## Q56 -->
+
+<!-- ```{r} -->
+<!-- df_labs %>% dplyr::select(contains('q56')) %>% lattice::histogram(~q56,.,scales=list(x=list(rot=30))) -->
+<!-- ``` -->
+
+# Remove missing values
+
+```{r}
+# map_int(df_nums,~sum(is.na(.x)))
+miceFit <- mice::mice(df_nums, printFlag = F)
+df_nums <- tbl_df(mice::complete(miceFit))
+# map_int(df_nums,~sum(is.na(.x)))
+
+# map_int(df_labs,~sum(is.na(.x)))
+miceFit <- mice::mice(as.data.frame(df_labs), method = 'pmm', printFlag = F)
+df_labs <- tbl_df(mice::complete(miceFit))
+# map_int(df_nums,~sum(is.na(.x)))
+```
+
+# Bi Plots
+
+```{r}
+# questions_to_consolidate <- c('q13','q24','q25','q26')
+# plot_bi_plots(df_nums %>% dplyr::select(contains(questions_to_consolidate[1])),questions_to_consolidate[1])
+# plot_bi_plots(df_nums %>% dplyr::select(contains(questions_to_consolidate[2])),questions_to_consolidate[2], xlim=c(0,.05), ylim=c(-0.01,0.002))
+# plot_bi_plots(df_nums %>% dplyr::select(contains(questions_to_consolidate[3])),questions_to_consolidate[3])
+# plot_bi_plots(df_nums %>% dplyr::select(contains(questions_to_consolidate[4])),questions_to_consolidate[4], xlim=c(0,0.05),ylim=c(-0.011,0.005))
+```
+
+## Sub grouping
+
+```{r}
+df_nums_adj <- df_nums %>%  
+  adjust_q13() %>% 
+  adjust_q24() %>% 
+  adjust_q25() %>% 
+  adjust_q26() %>% 
+  adjust_q2() %>% 
+  adjust_q4() %>% 
+  adjust_names()
+# %>% 
+#   adjust_q56()
+
+glimpse(df_nums_adj)
+```
+
+
+# Scaling
+```{r}
+df_nums.scaled <- scale(df_nums_adj)
+centers <- attributes(df_nums.scaled)[[3]]
+spreads <- attributes(df_nums.scaled)[[4]]
+df_nums.scaled <- tbl_df(df_nums.scaled)
+head(df_nums.scaled)
+```
+
+# Correlation Plot
+```{r}
+df_nums_adj %>% cor() %>% corrplot(method = 'shade',tl.col = 'black',tl.cex = .9, order = 'AOE', hclust.method = 'ward.D2')
+```
+
+
+# Simple clustering
+
+## H clust
+
+```{r}
+distMat <- dist(df_nums.scaled)
+hclustFit <- hclust(d = distMat, method = 'ward.D2')
+k=7
+plot(hclustFit, cex = 0.2)
+rect.hclust(hclustFit, k=k, border="red")
+cor(cophenetic(hclustFit), distMat)
+hclust_segments <- cutree(hclustFit, k = k)
+table(hclust_segments)
+clusplot(df_nums.scaled, hclust_segments, color=TRUE, shade=TRUE, labels=4, lines=0, main="K-means cluster plot")
+
+seg.summ(df_nums.scaled, hclust_segments) -> centroids
+centroids
+```
+
+```{r}
+distMat_labs <- daisy(df_labs)
+hclustFit <- hclust(d = distMat_labs, method = 'ward.D2')
+k = 5
+plot(hclustFit,cex=.1)
+rect.hclust(hclustFit, k=k, border="red")
+cor(cophenetic(hclustFit), distMat_labs)
+hclust_segments <- cutree(hclustFit, k = k)
+table(hclust_segments)
+seg.summ(df_labs, hclust_segments)
+clusplot(df_labs, hclust_segments, color=TRUE, shade=TRUE, labels=4, lines=0, main="K-means cluster plot")
+```
+
+
+```{r}
+cut.5 <- cutree(hclustFit, k=7)
+plot(silhouette(cut.5,distMat_labs))
+head(cut.5)
+```
+
+## K-means
+```{r}
+wssplot <- function(numsub, nc=15, seed=1234) {
+  wss <- (nrow(numsub)-1)*sum(apply(numsub,2,var))
+  for (i in 2:nc) {
+    set.seed(seed)
+    wss[i] <- sum(kmeans(numsub, centers=i)$withinss)}
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")}
+
+wssplot(df_nums.scaled)
+```
+
+```{r}
+clusterresults <- kmeans(df_nums.scaled,6,nstart = 20)
+?kmeans
+# names(clusterresults)
+clusterresults$withinss
+# clusterresults$tot.withinss
+# clusterresults$totss
+clusterresults$betweenss
+clusterresults$size
+rsquare <- clusterresults$betweenss/clusterresults$totss
+rsquare
+clusplot(df_nums.scaled, clusterresults$cluster, color=TRUE, shade=TRUE, labels=4, lines=0, main="K-means cluster plot")
+```
+
+```{r}
+seg.summ(df_nums_adj, clusterresults$cluster) -> segsummary_results
+segsummary_results
+```
+```{r}
+df_labs$q1 %>% levels()
+```
+
+```{r}
+boxplot(df_nums_adj$q26_bargain~clusterresults$cluster)
+lattice::xyplot(jitter(clusterresults$cluster)~jitter(q26_bargain), df_nums_adj)
+```
+
+
+```{r}
+df_nums_adj %>% skimr::skim()
+```
+
+
+## PAM
+
+<!-- ## poLCA -->
+
+<!-- ```{r} -->
+<!-- poLCA(formula = cbind(q1,q2r1,q2r2,q2r3,q2r4,q2r5,q2r6,q2r7,q2r8,q2r9,q4r1,q4r2,q4r3,q4r4,q4r5,q4r6,q4r7,q4r8,q4r9,q4r10,q4r11,q5r1,q11,q12,q13r1,q13r2,q13r3,q13r4,q13r5,q13r6,q13r7,q13r8,q13r9,q13r10,q13r11,q13r12,q24r1,q24r2,q24r3,q24r4,q24r5,q24r6,q24r7,q24r8,q24r9,q24r10,q24r11,q24r12,q25r1,q25r2,q25r3,q25r4,q25r5,q25r6,q25r7,q25r8,q25r9,q25r10,q25r11,q25r12,q26r18,q26r3,q26r4,q26r5,q26r6,q26r7,q26r8,q26r9,q26r10,q26r11,q26r12,q26r13,q26r14,q26r15,q26r16,q26r17,q48,q49,q50r1,q50r2,q50r3,q50r4,q50r5,q54,q55,q56,q57)~1, data = as.data.frame(df_labs), nclass = 4) -->
+<!-- ``` -->
+
+## tsne
+
+```{r}
+tsneFit <- Rtsne::Rtsne(X = as.matrix(df_nums.scaled), perplexity = 40, max_iter = 5000, pca = FALSE, momentum = 0.75)
+tsneFit
+toPlot <- tbl_df(tsneFit$Y)
+names(toPlot) <- c('X','Y')
+xyplot(X~Y, data = toPlot)
+```
+
+```{r}
+df_nums_adj %>% bind_cols(toPlot) %>% 
+  ggplot(aes(x=X,y=Y))+
+  geom_point(aes(color=q26_brands))
+```
+```{r}
+df_nums_adj %>% bind_cols(toPlot) %>% 
+  lattice::xyplot(Y~X|q26_bargain,groups=q57_mf,data=.,auto.key=list(columns=8))
+```
+```{r}
+densityplot(~q26_bargain,groups=q57_mf, df_nums_adj, auto.key = T)
+histogram(~q26_bargain|q57_mf, df_nums_adj, auto.key = T)
+```
+
+
+# Model based
+
+```{r}
+fit <- Mclust(df_nums.scaled,5)
+# plot(fit,data=df_nums.scaled, what="density") # plot results
+summary(fit) # display the best model
+```
+
+
+# Factor Analysis
+```{r}
+nScree(as.data.frame(df_nums.scaled))
+factanal(df_nums_adj, factors=8, rotation="oblimin")
+```
+

@@ -1,3 +1,7 @@
+
+# Created by https://www.gitignore.io/api/r
+
+### R ###
 # History files
 .Rhistory
 .Rapp.history
@@ -26,7 +30,7 @@ vignettes/*.pdf
 
 # knitr and R markdown default cache directories
 /*_cache/
-# /cache/
+/cache/
 
 # Temporary files created by R markdown
 *.utf8.md
@@ -34,3 +38,10 @@ vignettes/*.pdf
 
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
+
+### R.Bookdown Stack ###
+# R package: bookdown caching files
+/*_files/
+
+
+# End of https://www.gitignore.io/api/r

@@ -1,4 +1,4 @@
-load("apphappyData.RData")
+load("data/apphappyData.RData")
 ls()
 ## [1] "apphappy.2.labs.frame" "apphappy.2.num.frame" ##
 

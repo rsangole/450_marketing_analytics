@@ -134,6 +134,28 @@ adjust_children <- function(df){
   df %>% 
     dplyr::select(-q50r2_inftod,-q50r3_6_12,-q50r4_13_17,-q50r5_adult)
 }
+adjust_income <- function(df){
+  df %>% 
+    dplyr::mutate(q56 = case_when(
+      q56 <= 4 ~ 1,
+      q56 >= 5 & q56 <=8 ~ 2,
+      q56 >= 9 & q56 <=11 ~ 3,
+      q56 >= 12 & q56 <= 13 ~ 4,
+      q56 >= 14 ~ 5
+    ))
+}
+adjust_age <- function(df){
+  df %>% 
+    dplyr::mutate(
+      q1 = case_when(
+        q1 <= 2 ~ 1,
+        q1 >= 3 & q1 <= 5 ~ 2,
+        q1 >= 6 & q1 <= 8 ~ 3,
+        q1 >= 9 & q1 <= 11 ~ 4,
+        q1 >= 12 ~ 5,
+      )
+    )
+}
 adjust_names <- function(df){
   df %>% 
     dplyr::rename(
@@ -296,7 +318,7 @@ df_nums %>% xtabs(~q12,., addNA = T)
 ```
 
 ```{r}
-map_int(df_nums,~sum(is.na(.x))) %>% sort() %>% tail() %>% barchart()
+map_int(df_nums,~sum(is.na(.x))) %>% sort() %>% tail(3) %>% barchart(main='Missing values')
 ```
 
 
@@ -317,6 +339,8 @@ df_nums <- tbl_df(mice::complete(miceFit))
 # plot_bi_plots(df_nums %>% dplyr::select(contains(questions_to_consolidate[4])),questions_to_consolidate[4], xlim=c(0,0.05),ylim=c(-0.011,0.005))
 ```
 
+# Data Prep
+
 ## Sub grouping
 
 ```{r}
@@ -331,21 +355,79 @@ df_nums_adj <- df_nums %>%
   adjust_race() %>% 
   adjust_gender() %>% 
   adjust_marital() %>% 
+  adjust_income() %>%
+  adjust_age() %>% 
   adjust_q11() %>% 
-  adjust_names()
+  adjust_names() %>% 
+  adjust_children()
 
 glimpse(df_nums_adj)
 ```
 
+## Selection of basis variables
+
 ```{r}
-map_dbl(df_nums_adj,~max(.x))
-map_dbl(df_nums_adj,~sd(.x))
+set1 <- c(
+  'q1_age',
+  # 'q11_appnum',
+  # 'q12_freeapppc',
+  'q48_edu',
+  'q49_marital',
+  'q50r1_nochild',
+  'q56_income',
+  # 'q57_mf',
+  # 'q13_visitfreq_social',
+  # 'q13_visitfreq_music',
+  # 'q13_visitfreq_video',
+  'q24_tech_posatt',
+  'q24_tech_enter',
+  'q24_tech_comm',
+  'q24_tech_negatv',
+  # 'q25_prsnlty_leader',
+  # 'q25_prsnlty_risk',
+  # 'q25_prsnlty_drive',
+  # 'q25_prsnlty_follower',
+  'q26_shopsavvy_bargain',
+  'q26_shopsavvy_brands',
+  'q26_shopsavvy_earn2spend',
+  'q26_shopsavvy_applover',
+  'q26_shopsavvy_children',
+  'q2_apple',
+  'q2_andriod',
+  'q2_windows',
+  # 'q2_tablet',
+  # 'q2_other',
+  # 'q4_use_music_apps',
+  # 'q4_use_tv_apps',
+  # 'q4_use_game_apps',
+  # 'q4_use_social_apps',
+  # 'q4_use_news_apps',
+  # 'q4_use_shop_apps',
+  # 'q4_use_none_apps',
+  'q54_white',
+  'q54_black',
+  'q54_asian',
+  'q54_hawai',
+  'q54_native',
+  # 'q54_other',
+  'q55_latino'
+)
+```
+
+```{r}
+df_nums_adj_backup <- df_nums_adj
+# df_nums_adj <- df_nums_adj_backup
+```
+
+
+```{r}
+df_nums_adj <- df_nums_adj %>% dplyr::select(one_of(set1))
 ```
 
 
 # Scaling
 ```{r}
-scaling_wanted <- F
+scaling_wanted <- T
 minmax_wanted <- F
 if (scaling_wanted) {
   df_nums_adjscaled <- scale(df_nums_adj)
@@ -370,10 +452,10 @@ df_nums_adjscaled %>% cor() %>% corrplot(method = 'shade',tl.col = 'black',tl.ce
 # Dissimilarity Calculations
 
 ```{r}
-ordered=c(1:4,11,13:28)
-symm_bin=c(6:10,12,29:47)
-df_nums_adjscaled[ordered] <- map_df(df_nums_adjscaled[ordered],~as.ordered(.x))
-df_nums_adjscaled[symm_bin] <- map_df(df_nums_adjscaled[symm_bin],~as.factor(.x))
+# ordered=c(1:4,11,13:28)
+# symm_bin=c(6:10,12,29:47)
+# df_nums_adjscaled[ordered] <- map_df(df_nums_adjscaled[ordered],~as.ordered(.x))
+# df_nums_adjscaled[symm_bin] <- map_df(df_nums_adjscaled[symm_bin],~as.factor(.x))
 distMat <- daisy(df_nums_adjscaled)
 ```
 
@@ -393,7 +475,7 @@ barchart(sort(method_vs_cop))
 ```{r}
 k = 4
 
-hclustFit <- hclust(d = distMat, method = 'ward.D')
+hclustFit <- hclust(d = distMat, method = 'ward.D2')
 plot(hclustFit, labels = F)
 rect.hclust(hclustFit, k=k, border="red")
 ```
@@ -420,7 +502,7 @@ plot(silhouette(cutFit,distMat))
 ### How many clusters to use?
 
 ```{r}
-wssplot <- function(numsub, nc=15, seed=10) {
+wssplot <- function(numsub, nc=15, seed=222) {
   wss <- (nrow(numsub)-1)*sum(apply(numsub,2,var))
   for (i in 2:nc) {
     set.seed(seed)
@@ -457,8 +539,9 @@ segsummary_results
 
 ```{r}
 pamFits <- tibble(k_pam = 2:10)
-pamFits$pamFits <- map(pamFits$k_pam, ~pam(df_nums_adj, k = .x, metric = 'manhattan'))
+pamFits$pamFits <- map(pamFits$k_pam, ~pam(df_nums_adjscaled, k = .x))
 pamFits$sil_avg_width <- map_dbl(pamFits$pamFits,~.x$silinfo$avg.width)
+pamFits
 ```
 
 ```{r}
@@ -467,19 +550,20 @@ pamFits %>%
 ```
 
 ```{r}
-plot(pamFits$pamFits[[2]])
+plot(pamFits$pamFits[[4]])
 ```
 
-
+```{r}
+seg.summ(df_nums_adj, pamFits$pamFits[[4]]$clustering)
+```
 
 # Model based
 
 ```{r}
 mclustFits <- tibble(mclust_clusters=2:8)
-mclustFits$mclustFits <- map(mclustFits$mclust_clusters, ~Mclust(df_nums_adj, G = .x))
+mclustFits$mclustFits <- map(mclustFits$mclust_clusters, ~Mclust(df_nums_adjscaled, G = .x))
 mclustFits$bic <- map_dbl(mclustFits$mclustFits, ~.x[['bic']])
 mclustFits$loglik <- map_dbl(mclustFits$mclustFits, ~.x[['loglik']])
-# plot(fit,data=df_nums_adjscaled, what="density") # plot results
 mclustFits
 ```
 
@@ -489,11 +573,11 @@ mclustFits %>%
 ```
 
 ```{r}
-summary(mclustFits[[3,'mclustFits']])
+summary(mclustFits[[2,'mclustFits']])
 ```
 
 ```{r}
-mclust_clusters <- mclustFits[[3,'mclustFits']]$classification
+mclust_clusters <- mclustFits[[2,'mclustFits']]$classification
 clusplot(df_nums_adj, mclust_clusters, color=TRUE, shade=TRUE, labels=4, lines=0, main="M Clust Plot, k = 4")
 ```
 
@@ -505,21 +589,21 @@ mclust_distMat <- daisy(df_nums_adj)
 plot(silhouette(mclust_clusters,mclust_distMat))
 ```
 
-## tsne
+<!-- ## tsne -->
 
-```{r}
-tsneFit <- Rtsne::Rtsne(X = as.matrix(df_nums_adjscaled), perplexity = 40, max_iter = 5000, pca = FALSE, momentum = 0.75)
-tsneFit
-toPlot <- tbl_df(tsneFit$Y)
-names(toPlot) <- c('X','Y')
-xyplot(X~Y, data = toPlot)
-```
+<!-- ```{r} -->
+<!-- tsneFit <- Rtsne::Rtsne(X = as.matrix(df_nums_adjscaled), perplexity = 40, max_iter = 5000, pca = FALSE, momentum = 0.75) -->
+<!-- tsneFit -->
+<!-- toPlot <- tbl_df(tsneFit$Y) -->
+<!-- names(toPlot) <- c('X','Y') -->
+<!-- xyplot(X~Y, data = toPlot) -->
+<!-- ``` -->
 
-```{r}
-df_nums_adj %>% bind_cols(toPlot) %>% 
-  lattice::xyplot(Y~X,groups=q13_visitfreq_video,data=.,auto.key=list(columns=6))
-```
+<!-- ```{r} -->
+<!-- df_nums_adj %>% bind_cols(toPlot) %>%  -->
+<!--   lattice::xyplot(Y~X,groups=q13_visitfreq_video,data=.,auto.key=list(columns=6)) -->
+<!-- ``` -->
 
-```{r}
-df_nums_adj %>% bind_cols(toPlot) %>% write_csv(path = '../data/tsne_out.csv', col_names = T)
-```
+<!-- ```{r} -->
+<!-- df_nums_adj %>% bind_cols(toPlot) %>% write_csv(path = '../data/tsne_out.csv', col_names = T) -->
+<!-- ``` -->

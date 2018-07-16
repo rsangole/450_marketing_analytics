@@ -1,6 +1,5 @@
-[ ] Remove all entries for q11=6 and check if it improves the clusters in any way
+[x] Remove all entries for q11=6 and check if it improves the clusters in any way
 [x] Change q49_marital from nominal/ordinal variable to many dummy vars - rsq dropped a bit for kmeans
 [ ] What if median values are used instead of means?
-[ ] What if q11=5 (70 counts) of "dont know" are set to NA, and then imputed, so that we estimate how many apps these folks have?
+[x] What if q11=5 (70 counts) of "dont know" are set to NA, and then imputed, so that we estimate how many apps these folks have?
 [x] RULE (A)
-[ ]

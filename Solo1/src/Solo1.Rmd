@@ -181,6 +181,7 @@ adjust_names <- function(df){
 load('../data/apphappyData.RData')
 df_labs <- tbl_df(apphappy.3.labs.frame)
 df_nums <- tbl_df(apphappy.3.num.frame)
+dim(df_nums)
 rm(apphappy.3.num.frame); rm(apphappy.3.labs.frame)
 df_labs$q57 <- as.factor(df_labs$q57)
 df_labs$caseID <- NULL
@@ -190,96 +191,6 @@ df_nums$q2r10 <- NULL
 df_labs$q5r1 <- NULL
 df_nums$q5r1 <- NULL
 ```
-
-<!-- # EDA -->
-
-<!-- ## Summaries -->
-
-<!-- ```{r} -->
-<!-- glimpse(df_labs) -->
-<!-- skimr::skim(df_labs) -->
-<!-- ``` -->
-
-<!-- ## Age -->
-
-<!-- ```{r} -->
-<!-- histogram(~q1, df_labs) -->
-<!-- ``` -->
-
-<!-- ## How many apps? -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% dplyr::select(contains('q11')) %>% lattice::histogram(~q11,.) -->
-<!-- ``` -->
-
-<!-- ## PC free? -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% dplyr::select(contains('q12')) %>% lattice::histogram(~q12,.) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- xtabs(formula = ~q11+q12,data = df_labs) -->
-<!-- ``` -->
-
-
-<!-- ## Website visits -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% select(contains('q13r')) %>% map(~utility_histogramplotter(.x)) -->
-<!-- ``` -->
-<!-- ## Q24 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% select(contains('q24r')) %>% map(~utility_histogramplotter(.x)) -->
-<!-- df_labs %>% select(contains('q24r')) %>% map_df(~as.numeric(.x)) %>% cor() %>% corrplot::corrplot(order = 'hclust') -->
-<!-- ``` -->
-<!-- ## Q25 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% select(contains('q25r')) %>% map(~utility_histogramplotter(.x)) -->
-<!-- df_labs %>% select(contains('q25r')) %>% map_df(~as.numeric(.x)) %>% cor() %>% corrplot::corrplot(order = 'hclust') -->
-<!-- ``` -->
-
-<!-- ## Q26 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% select(contains('q26r')) %>% map(~utility_histogramplotter(.x)) -->
-<!-- df_labs %>% select(contains('q26r')) %>% map_df(~as.numeric(.x)) %>% cor() %>% corrplot::corrplot(order = 'hclust') -->
-<!-- ``` -->
-
-<!-- ## Q5 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% dplyr::select(contains('q5r1')) %>% lattice::histogram(~q5r1,.,scales=list(x=list(rot=30))) -->
-<!-- ``` -->
-
-<!-- ## Q48 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% dplyr::select(contains('q48')) %>% lattice::histogram(~q48,.,scales=list(x=list(rot=30))) -->
-<!-- ``` -->
-
-<!-- ## Q49 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% dplyr::select(contains('q49')) %>% lattice::histogram(~q49,.,scales=list(x=list(rot=30))) -->
-<!-- ``` -->
-
-<!-- ## Q50 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% select(contains('q50r')) %>% map(~utility_histogramplotter(.x)) -->
-<!-- ``` -->
-
-<!-- ## Q56 -->
-
-<!-- ```{r} -->
-<!-- df_labs %>% dplyr::select(contains('q56')) %>% lattice::histogram(~q56,.,scales=list(x=list(rot=30))) -->
-<!-- ``` -->
-
-
-
 
 # Remove missing values
 
@@ -411,17 +322,153 @@ set1 <- c(
   'q54_native',
   # 'q54_other',
   'q55_latino'
-)
+  )
+set2 <- c(
+  'q1_age',
+  # 'q11_appnum',
+  'q12_freeapppc',
+  'q48_edu',
+  'q49_marital',
+  'q50r1_nochild',
+  'q56_income',
+  # 'q57_mf',
+  'q13_visitfreq_social',
+  'q13_visitfreq_music',
+  'q13_visitfreq_video',
+  'q24_tech_posatt',
+  'q24_tech_enter',
+  'q24_tech_comm',
+  'q24_tech_negatv',
+  'q25_prsnlty_leader',
+  'q25_prsnlty_risk',
+  'q25_prsnlty_drive',
+  'q25_prsnlty_follower',
+  'q26_shopsavvy_bargain',
+  'q26_shopsavvy_brands',
+  'q26_shopsavvy_earn2spend',
+  'q26_shopsavvy_applover',
+  'q26_shopsavvy_children',
+  # 'q2_apple',
+  # 'q2_andriod',
+  # 'q2_windows',
+  # 'q2_tablet',
+  # 'q2_other',
+  # 'q4_use_music_apps',
+  # 'q4_use_tv_apps',
+  # 'q4_use_game_apps',
+  # 'q4_use_social_apps',
+  # 'q4_use_news_apps',
+  # 'q4_use_shop_apps',
+  # 'q4_use_none_apps',
+  'q54_white',
+  'q54_black',
+  'q54_asian',
+  'q54_hawai',
+  'q54_native',
+  # 'q54_other',
+  'q55_latino'
+  )
+set3 <- c(
+  'q1_age',
+  'q11_appnum',
+  'q12_freeapppc',
+  'q48_edu',
+  'q49_marital',
+  'q50r1_nochild',
+  'q56_income',
+  'q57_mf',
+  # 'q13_visitfreq_social',
+  # 'q13_visitfreq_music',
+  # 'q13_visitfreq_video',
+  # 'q24_tech_posatt',
+  # 'q24_tech_enter',
+  # 'q24_tech_comm',
+  # 'q24_tech_negatv',
+  # 'q25_prsnlty_leader',
+  # 'q25_prsnlty_risk',
+  # 'q25_prsnlty_drive',
+  # 'q25_prsnlty_follower',
+  'q26_shopsavvy_bargain',
+  'q26_shopsavvy_brands',
+  'q26_shopsavvy_earn2spend',
+  'q26_shopsavvy_applover',
+  'q26_shopsavvy_children',
+  'q2_apple',
+  'q2_andriod',
+  'q2_windows',
+  'q2_tablet',
+  'q2_other',
+  'q4_use_music_apps',
+  'q4_use_tv_apps',
+  'q4_use_game_apps',
+  'q4_use_social_apps',
+  'q4_use_news_apps',
+  'q4_use_shop_apps',
+  'q4_use_none_apps'
+  # 'q54_white',
+  # 'q54_black',
+  # 'q54_asian',
+  # 'q54_hawai',
+  # 'q54_native',
+  # 'q54_other',
+  # 'q55_latino'
+  )
+set4 <- c(
+  'q1_age',
+  # 'q11_appnum',
+  # 'q12_freeapppc',
+  # 'q48_edu',
+  'q49_marital',
+  'q50r1_nochild',
+  'q56_income',
+  'q57_mf',
+  'q13_visitfreq_social',
+  'q13_visitfreq_music',
+  'q13_visitfreq_video',
+  'q24_tech_posatt',
+  'q24_tech_enter',
+  'q24_tech_comm',
+  'q24_tech_negatv',
+  'q25_prsnlty_leader',
+  'q25_prsnlty_risk',
+  'q25_prsnlty_drive',
+  'q25_prsnlty_follower',
+  'q26_shopsavvy_bargain',
+  'q26_shopsavvy_brands',
+  'q26_shopsavvy_earn2spend',
+  'q26_shopsavvy_applover',
+  'q26_shopsavvy_children'
+  # 'q2_apple',
+  # 'q2_andriod',
+  # 'q2_windows',
+  # 'q2_tablet',
+  # 'q2_other',
+  # 'q4_use_music_apps',
+  # 'q4_use_tv_apps',
+  # 'q4_use_game_apps',
+  # 'q4_use_social_apps',
+  # 'q4_use_news_apps',
+  # 'q4_use_shop_apps',
+  # 'q4_use_none_apps'
+  # 'q54_white',
+  # 'q54_black',
+  # 'q54_asian',
+  # 'q54_hawai',
+  # 'q54_native',
+  # 'q54_other',
+  # 'q55_latino'
+  )
 ```
 
 ```{r}
 df_nums_adj_backup <- df_nums_adj
-# df_nums_adj <- df_nums_adj_backup
+```
+```{r}
+df_nums_adj <- df_nums_adj_backup
 ```
 
-
 ```{r}
-df_nums_adj <- df_nums_adj %>% dplyr::select(one_of(set1))
+df_nums_adj <- df_nums_adj %>% dplyr::select(one_of(set4))
 ```
 
 
@@ -473,9 +520,8 @@ barchart(sort(method_vs_cop))
 ```
 
 ```{r}
-k = 4
-
-hclustFit <- hclust(d = distMat, method = 'ward.D2')
+k = 6
+hclustFit <- hclust(d = distMat, method = 'ward.D')
 plot(hclustFit, labels = F)
 rect.hclust(hclustFit, k=k, border="red")
 ```
@@ -496,13 +542,25 @@ centroids
 cutFit <- cutree(hclustFit, k)
 plot(silhouette(cutFit,distMat))
 ```
+```{r}
+k <- 2:10
+widths <- NULL
+for(k_ in k){
+  hclustFit <- hclust(d = distMat, method = 'ward.D')
+  cutFit <- cutree(hclustFit, k_)
+  widths <- c(widths,mean(silhouette(cutFit,distMat)[,'sil_width']))
+}
+plot(k,widths,type='b')
+cbind(k,widths)
+```
+
 
 ## K-means
 
 ### How many clusters to use?
 
 ```{r}
-wssplot <- function(numsub, nc=15, seed=222) {
+wssplot <- function(numsub, nc=15, seed=1111) {
   wss <- (nrow(numsub)-1)*sum(apply(numsub,2,var))
   for (i in 2:nc) {
     set.seed(seed)
@@ -513,6 +571,17 @@ wssplot(df_nums_adjscaled)
 ```
 
 ### Solving the k-means model
+
+```{r}
+k <- 2:10
+widths <- NULL
+for(k_ in k){
+  clusterresults <- kmeans(x = df_nums_adjscaled, centers = k_, nstart = 30)
+  widths <- c(widths,mean(silhouette(clusterresults$cluster,distMat)[,'sil_width']))
+}
+plot(k,widths,type='b')
+cbind(k,widths)
+```
 
 ```{r}
 # Using cluster centers from hclust:
@@ -528,6 +597,7 @@ clusterresults <- kmeans(x = df_nums_adjscaled, centers = k_kmeans)
 rsquare <- clusterresults$betweenss/clusterresults$totss
 cat('\nWithin SS:',clusterresults$withinss,' Sizes:\n',clusterresults$size,'\nrsq:', rsquare)
 clusplot(df_nums_adjscaled, clusterresults$cluster, color=TRUE, shade=TRUE, labels=4, lines=0, main="K-means cluster plot")
+plot(silhouette(clusterresults$cluster,distMat))
 ```
 
 ```{r}
@@ -550,11 +620,11 @@ pamFits %>%
 ```
 
 ```{r}
-plot(pamFits$pamFits[[4]])
+plot(pamFits$pamFits[[9]])
 ```
 
 ```{r}
-seg.summ(df_nums_adj, pamFits$pamFits[[4]]$clustering)
+seg.summ(df_nums_adj, pamFits$pamFits[[8]]$clustering)
 ```
 
 # Model based
@@ -607,3 +677,4 @@ plot(silhouette(mclust_clusters,mclust_distMat))
 <!-- ```{r} -->
 <!-- df_nums_adj %>% bind_cols(toPlot) %>% write_csv(path = '../data/tsne_out.csv', col_names = T) -->
 <!-- ``` -->
+

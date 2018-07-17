@@ -105,6 +105,13 @@ For multilevel variables of `Age` and `Income`, individual levels are binned tog
 
 \newthought{Subsetting} A total of 27 key variables were taken into the analysis going forward.
 
+```{r}
+read_csv('data/questions_table.csv') %>% 
+  janitor::clean_names(case = 'upper_camel') %>% 
+  knitr::kable()
+```
+
+
 # Section III - t-SNE
 
 t-SNE, or t-Distributed Stochastic Neighbor Embedding is a non-parametric technique to perform dimensionality reduction suited for high-dimensional large datasets. It maintains the underlying structure (local variation) in higher dimensional data while also capturing the macro-structure of the data. t-SNE has been used for visualization in a wide range of applications, including computer security research, music analysis, cancer research, bioinformatics, and biomedical signal processing. It is often used to visualize high-level representations learned by an artificial neural network. Upon application of t-SNE to the full multivariate dataset, we obtain a 2-dimensional representation as shown to the right.

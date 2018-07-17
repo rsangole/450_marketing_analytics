@@ -590,9 +590,10 @@ clusterresults <- kmeans(x = df_nums_adjscaled, centers = kmeans_centroids[,-1])
 rsquare <- clusterresults$betweenss/clusterresults$totss
 cat('\nWithin SS:',clusterresults$withinss,' Sizes:\n',clusterresults$size,'\nrsq:', rsquare)
 clusplot(df_nums_adjscaled, clusterresults$cluster, color=TRUE, shade=TRUE, labels=4, lines=0, main="K-means cluster plot")
+plot(silhouette(clusterresults$cluster,distMat))
 
 # Using number of clusters + random starts
-k_kmeans = 5
+k_kmeans = 6
 clusterresults <- kmeans(x = df_nums_adjscaled, centers = k_kmeans)
 rsquare <- clusterresults$betweenss/clusterresults$totss
 cat('\nWithin SS:',clusterresults$withinss,' Sizes:\n',clusterresults$size,'\nrsq:', rsquare)
@@ -620,11 +621,11 @@ pamFits %>%
 ```
 
 ```{r}
-plot(pamFits$pamFits[[9]])
+plot(pamFits$pamFits[[1]])
 ```
 
 ```{r}
-seg.summ(df_nums_adj, pamFits$pamFits[[8]]$clustering)
+seg.summ(df_nums_adj, pamFits$pamFits[[1]]$clustering)
 ```
 
 # Model based

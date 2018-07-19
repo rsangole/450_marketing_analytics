@@ -74,6 +74,7 @@ The original dataset available for analysis comprises of responses from 1800 cus
 \newthought{Missing Values} Once the rules are applied, There are 99 missing values in q57 and 53 missing values in q11. Imputation is carried out using the `mice` package, which performs multiple imputation using chained equations, using a random forest method. 
 
 \newthought{Recoding} A significant amount of recoding was done on most of the questions. For example:
+`r tufte::margin_note('Almost every original question is modified to more usable and succint groupings. For multilevel variables of Age and Income, individual levels are binned together.')`
 
 * Q13 - Website visit frequency:
     - Social Visit Freq = Average of Facebook, Twitter, LinkedIn and Myspace
@@ -101,12 +102,10 @@ The original dataset available for analysis comprises of responses from 1800 cus
 
 * Q2 - Platforms - Apple, Andriod, Windows, or Other
 
-Almost every original question is modified to more usable and succint groupings. For multilevel variables of `Age` and `Income`, individual levels are binned together.
-
-\newthought{Subsetting} A total of 27 key variables were taken into the analysis going forward.
+\newthought{Subsetting} A total of 27 key variables were taken into the analysis going forward. *Table 1* provides details of which questions fall in which set.
 
 ```{r echo=FALSE, fig.cap='Questions Table', message=FALSE, warning=FALSE}
-read_csv('../data/questions_table.csv', na = '') %>% janitor::clean_names(case = 'upper_camel') %>% knitr::kable(caption = 'Question Sets')
+read_csv('../data/questions_table.csv', na = ' ') %>% janitor::clean_names(case = 'upper_camel') %>% knitr::kable(caption = 'Question Sets')
 ```
 
 \newthought{Transformation} Two types of data transformations are investigated:
@@ -142,7 +141,7 @@ Some of the key takeaways:
 
 * ~ 100% of Asian respondants use Apple devices
 * ~ 0% of Black respondants use Windows phones, and ~0% of Black respondants use tablets
-* Cluster E - 100% latino cluster is largely an Apple device user, with ~0%windows usage
+* Cluster E - 100% latino cluster is largely an Apple device user, with ~0% windows usage
 * Cluster C - 100% of this cluster do not use any apps
 * Cluster C is also mostly White, 60 years +, and richer
 * A majority of Android users are White
@@ -275,14 +274,19 @@ Going through all the basis variables, we can come up with a few market segmenta
 grid.raster(readPNG("../reports/result_out.png"))
 ```
 
-\newthought{Recommendations} AppHappy should use these clusters to generate some customized marketing plans. A few key insights are that there is a mixed view towards technology, phone app utilization and adoption. This means that AppHappy's marketing strategy should be a combination of technology-driven and conventional approaches. Furthermore, as shown in the t-SNE analyses, there are very distinct groupings of age, race and phone platform. Thus, depending on the services/products being marketed, the apps developed to market to cluster 5 and 6 can be further customized. Both these clusters are young, driven individuals who are single or married. Cluster 2 is older married individuals who have much higher income than the rest. This group also has moderate views across the board. Group 3 has the lowest positive attitude towards technology adoption and usage. This group needs to be targeting using conventional marketing methods.
+\newthought{Recommendations} AppHappy should use these clusters to generate some customized marketing plans. A few key insights are that there is a mixed view towards technology, phone app utilization and adoption. This means that AppHappy's marketing strategy should be a combination of technology-driven and conventional approaches. Furthermore, as shown in the t-SNE analyses, there are very distinct groupings of age, race and phone platform. Thus, depending on the services/products being marketed, the apps developed to market to cluster 5 and 6 can be further customized. Both these clusters are young, driven individuals who are single or married. Cluster 2 is older married individuals who have much higher income than the rest. This group also has moderate views across the board. Group 3 has the lowest positive attitude towards technology adoption and usage. This group needs to be targeting using conventional marketing methods. Combining the results from the clustering approach with the t-SNE investigation, AppHappy can focus on Asian and Latino respondants by developing marketing campaigns which focus on Apple devices, can reach Black respondants by focusing on non-Windows phones.
 
 # Section VI - Classification & Predictive Modeling
 
+To develop a classification scheme which AppHappy can use to make predictions on customers for which it doesn't have data for, AppHappy can do some of the following activities.If we can generate any demographic/geographic information about the new customer base, we can analyze the existing known customer base using similar variables, assume that the new customer base follow a similar distribution. These data can be combined with the labels created by the k-means clustering algorithm. A predictive model using various techniques can be developed, viz. statistical methods like multinomial logistic regression models, or simpler machine learning routines like boosted classification trees, especially using `xgboost` which is a powerful computationally light package to develop boosted classification trees. `xgboost` is particularly powerful at handling multiclass problems with class imbalances, redundent variables and small or large data. Where tools like `xgboost` fall short is interpretablity of the model. Techniques like classification trees using `rpart` or simpler logistic regression routines will enable the company to interpret which predictor variables affect the customer classes.
+
+Alternatively, we can survey a portion of the new customers (randomly, or stratified on some key variables like age or income). We hypothesize that the smaller group of surveyed customers represent the entirety of the new customer base. Of course, if the cost of false positive is low, we can always mass market to the full base, while working on generating data for the new customer base. 
+
 # Section VII - Wrap Up
+
+We applied a number combinations of clustering techniques and distance metrics on the data provided. Market segmentation profiles were developed from a select few questions out of the larger group of original questions. Unsupervised clustering method of k-means along with dimension reduction techniques of t-SNE provide many insights into the groupings of customers upon which AppHappy can make actionable marketing plans.
 
 # References
 
 1. https://lvdmaaten.github.io/tsne/
 1. Gower, J. C. (1971) A general coefficient of similarity and some of its properties, Biometrics 27, 857–874
-1. 

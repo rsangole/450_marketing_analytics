@@ -1,10 +1,13 @@
 ---
 title: "R Notebook"
-output: 
-  html_notebook: 
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
     highlight: espresso
     number_sections: yes
     theme: journal
+  pdf_document: default
 ---
 
 ```{r libraries}

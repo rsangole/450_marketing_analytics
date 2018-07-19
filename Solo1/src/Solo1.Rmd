@@ -603,7 +603,16 @@ plot(silhouette(clusterresults$cluster,distMat))
 
 ```{r}
 seg.summ(df_nums_adj, clusterresults$cluster) -> segsummary_results
+segsummary_results %>% write_csv(path = '../reports/kmeans_results.csv', col_names = T)
 segsummary_results
+```
+```{r}
+kmeans_results <- df_nums_adj %>% 
+  mutate(cluster = clusterresults$cluster)
+
+purrr::map2(kmeans_results, names(kmeans_results),
+            ~bwplot(cluster~.x, kmeans_results,
+                    main=.y))
 ```
 
 ## PAM
@@ -644,11 +653,11 @@ mclustFits %>%
 ```
 
 ```{r}
-summary(mclustFits[[2,'mclustFits']])
+summary(mclustFits[[4,'mclustFits']])
 ```
 
 ```{r}
-mclust_clusters <- mclustFits[[2,'mclustFits']]$classification
+mclust_clusters <- mclustFits[[4,'mclustFits']]$classification
 clusplot(df_nums_adj, mclust_clusters, color=TRUE, shade=TRUE, labels=4, lines=0, main="M Clust Plot, k = 4")
 ```
 

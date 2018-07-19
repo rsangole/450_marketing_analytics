@@ -53,6 +53,8 @@ Section VI outlines how to perform classification on the model.
 
 # Section I - Overview of Methodologies Used
 
+The approach used for this project follows the CRISP-DM methodolgy, iteratively using exploratory analysis work, modeling work and interpretation of the results. First, the data is cleansed - quality checks are performed, few anomalies are corrected, transformations and summarizations are performed. Thereafter, unsupervized dimension reduction is carried out using t-SNE, described in section III. Many insights are obtained from this analysis. Finally 4 types of models are run for clustering, described in section IV. Segmentation profiling is performed and thereafter some discussion on predictive classificiation models.
+
 # Section II - Data Preparation
 
 The original dataset available for analysis comprises of responses from 1800 customers for 16 questions. These questions span objective multi-choice demographic questions (age, gender, education, income) to personality and personal preference related questions on a Likert scale. Since the task at hand is to develop an *attitudinal post hoc segmentation*, it's important to first cleanse these data to responses which are relevant in this analysis. Furthermore, it's important to quality check these data against some rules while also addressing cases of missing values. This section describes the modifications made on the original data.
@@ -99,18 +101,20 @@ The original dataset available for analysis comprises of responses from 1800 cus
 
 * Q2 - Platforms - Apple, Andriod, Windows, or Other
 
-Almost every original question is modified to more usable and succint groupings.
-
-For multilevel variables of `Age` and `Income`, individual levels are binned together.
+Almost every original question is modified to more usable and succint groupings. For multilevel variables of `Age` and `Income`, individual levels are binned together.
 
 \newthought{Subsetting} A total of 27 key variables were taken into the analysis going forward.
 
-```{r}
-read_csv('data/questions_table.csv') %>% 
-  janitor::clean_names(case = 'upper_camel') %>% 
-  knitr::kable()
+```{r echo=FALSE, fig.cap='Questions Table', message=FALSE, warning=FALSE}
+read_csv('../data/questions_table.csv', na = '') %>% janitor::clean_names(case = 'upper_camel') %>% knitr::kable(caption = 'Question Sets')
 ```
 
+\newthought{Transformation} Two types of data transformations are investigated:
+
+1. Min-Max Normalization - This makes every variable vary between 0 and 1. Binary variables do not change their values. 
+1. Standardization - This makes every variable have a mean of 0 and a standard deviation of 1.
+
+It was found that method two gave better results across the board and is used in the final solution.
 
 # Section III - t-SNE
 
@@ -128,7 +132,7 @@ This plot can be overlayed with, or colored with the any of the explanatory vari
 * F = Asian
 * H = Hawaiian
 
-```{r fig.fullwidth=TRUE, out.width='60%',cache=TRUE, echo=FALSE, fig.cap='t-SNE with race'}
+```{r echo=FALSE, fig.fullwidth=TRUE, message=FALSE, warning=FALSE, cache=TRUE, out.width='60%'}
 grid.raster(readPNG("../images/tsne_race.png"))
 ```
 
@@ -149,9 +153,136 @@ Some of the key takeaways:
 * Most folk think of themselves are thought leaders
 * As age increases, folks tend to be more risk averse
 
+# Section IV - Clustering Approaches
+
+There are two main categories of clustering approaches tried - non-hierarchical and hierarchical. For the non-hierarchical clustering approach, two types of models are attempted - `k-means` and `pam`. For the hierarchical clustering approach, the `hclust` approach is used with a variety of agglomeration techniques. All three appoaches do require the user to decide the number of clusters. For `kmeans`, the elbow method, the average silhouette width and the r-square values were used to decide the number of clusters. For `pam`, the average silhouette width is used. The the non-hierarchical methods, this number needs to be decided before execution. For the hierarchical clustering approach, the number of clusters can be gauged by visual inspection of the dendogram. For the `hclust` approach, the average silhouette width is used as a deciding factor. Along with the number of clusters, which question-set (between the four sets of questions described in Section II) gives the best possible clustering option needs to be decided. Finally, model based clustering is attempted using the `mclust` method in R.
+
+The final decision was made as a balance between:
+
+* the average silhouette width of the technique, 
+* the individual silhouette widths of each cluster, 
+* the balance of number of members in each cluster, 
+* the amount of variation explained in the first two principal components, 
+* the explainability of the resulting cluster sets,
+* the visual separation of the clusters when plotted on the first two principal components
+
+`r tufte::margin_note('Euclidean and Manhattan distances were also investigated as options since even the categorical variables are converted to numerics, but Gower did work better.')`
+
+\newthought{Distance Metric} For hierarchical methods, a distance matrix needs to be calculated. While for continous variables, the commonly used distance metric is either Euclidean distance or Manhattan distance, when there is a mix of continous and categorical variables, the Gower distance is used, using the `daisy` function in the `cluster` package. The Gower distance was applied to both the continuous data as well as the categorical data (coded as ordinal variables where appropriate, and recoded as dummy variables where ordinality does not make sense). 
+
+```{r echo=FALSE, fig.margin=TRUE, message=FALSE, warning=FALSE, cache=TRUE, fig.cap='Correlation coeff between the cophenetic and the distance matrix always showed us that average is the best linkage, however it performed the worse when trying to interpret the hclust results'}
+grid.raster(readPNG("hclust_linkages.png"))
+```
+
+## Hierarchical Agglomerative Clustering
+
+```{r fig.margin=TRUE, fig.width=4, fig.height=4, cache=TRUE, echo=FALSE, fig.cap='hclust - set 4'}
+grid.raster(readPNG("../reports/hclust_silwidth.png"))
+```
+
+HAC is performed using `hclust` on the distance matrix calculated using `daisy`. To decide between the different linkage methods (single, complete, average, ward.D and ward.D2), the dendrograms obtained using each method is plotted and visually inspected. Depending on the question set used, ward.D and ward.D2 outperform all others when judged by the number of balanced clusters seen. Single, complete and average linkaging result in either very long chains, or many clusters with only handful of members. The plot below shows the dendrogram for question set 4 with the `ward.D` linkage method. `r tufte::margin_note('From here on, all the graphs are for question set 4 unless otherwise noted')`
+
+```{r fig.fullwidth=TRUE, out.width='50%', fig.width=2, cache=TRUE, echo=FALSE, fig.cap='hclust - set 4'}
+grid.raster(readPNG("../reports/hclust_set4.png"))
+```
+
+The figure to the right shows the clusters for a 6 cluster solution. However, if the average silhouette widths are considered to determine the number of clusters, we get a two class solution.
+
+## k-Means Clustering
+
+k-Means clustering was run with two methods - 
+
+```{r fig.margin=TRUE, fig.width=4, fig.height=4, cache=TRUE, echo=FALSE, fig.cap='kmeans - set 4 - showing possibly 5 or 6 clusters'}
+grid.raster(readPNG("../reports/kmeans_elbow.png"))
+```
+1. The number of clusters is determined by the elbow method, and the cluster start points were randomly selected, or
+1. The number of clusters is determined by the elbow method, and the cluster start points are determined through `hclust`
+
+Depending on the question set used and the transformation used, either method 1 or method 2 gave better separation in the PCA plot. With the final selected model, method 1 worked better.
+
+```{r fig.margin=FALSE, fig.width=4, fig.height=4, cache=TRUE, echo=FALSE, fig.cap='kmeans - set 4 - showing 6 clusters - method 1'}
+grid.raster(readPNG("../reports/kmeans_pcaplot.png"))
+```
+
+```{r fig.margin=FALSE, fig.width=4, fig.height=4, cache=TRUE, echo=FALSE, fig.cap='kmeans - set 4 - showing the average sil width for each cluster'}
+grid.raster(readPNG("../reports/kmeans_silplot.png"))
+```
+
+## Partitioning Around Medoids
+
+The performance of the `pam` method varyied greatly depending on the selected question set and transformation. If the average sil width was used as a determining factor, the number of clusters varied from 10 for set 1 to 2 for set 2. Additionally, the PCA plot did not show adequate separation of the clusters.
+
+
+## Model Based Clustering
+
+The `mclust` method selects the optimal number of clusters during the analysis. This method was the most stable returning an expected number of clusters equal to three no matter which questions set or transformation. Though, this method has the lowest average sil score amongst all other methods. Furthermore, this method resulted in very poor separation on the clusters as seen in this plot.
+
+```{r fig.margin=FALSE, fig.width=4, fig.height=4, cache=TRUE, echo=FALSE, fig.cap='kmeans - set 4 - showing possibly 5 or 6 clusters - method 1'}
+grid.raster(readPNG("../reports/mclust_pcaplot.png"))
+```
+
+## Model Comparison
+
+A total of 16 models are run - 4 types of models across 4 sets of questions. The critical performance parameters for all models are shown below.
+
+
+```{r echo=FALSE, fig.cap='Model Comparison', message=FALSE, warning=FALSE, out.width='50%'}
+read_csv('../reports/model_comparison.csv', na = '') %>% janitor::clean_names(case = 'upper_camel') %>% .[,1:5] %>% knitr::kable()
+
+read_csv('../reports/model_comparison.csv', na = '') %>% janitor::clean_names(case = 'upper_camel') %>% .[,c(1:2,6:9)] %>% knitr::kable()
+
+read_csv('../reports/model_comparison.csv', na = '') %>% janitor::clean_names(case = 'upper_camel') %>% .[,c(1:2,10:13)] %>% knitr::kable()
+```
+
+
+Few key takeaways:
+
+1. The percentage of variation explained by the first two components are highest for set 4
+1. The average sil width is also the highest for all models for set 4
+1. The k-means r squared value is also the highest for set 4 models
+
+Based on these results, the final selected model for market segmentation profiling is the k-means model, using number of clusters selected by the elbow method, using cluster start locations identified by hierarchical clustering using the ward.D agglomeration method. The separation between the clusters is also the quite high as seen in figure 6. 
+
+# Section V - Market Segmentation Profiling
+
+Now that the clusters are identified, each of the basis variables can be investigated based on these clusters. Visually, these basis variables are investigated using boxplots and histograms to derive some interpretation behind the meaning behind each cluster. Each of the basis variables can be summarized by a mean, for example, as shown in a sample of variables in the table below:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='50%'}
+readr::read_csv(file = '../reports/kmeans_results.csv', na = '') %>% 
+  janitor::clean_names(case = 'upper_camel') %>% .[1:6,1:5] %>% 
+  knitr::kable(digits = 2)
+```
+
+As an example, the top few basis variables which show these patterns:
+
+```{r fig.fullwidth=TRUE, out.width='100%', fig.width=2, cache=TRUE, echo=FALSE, fig.cap='Basis variables boxplots'}
+grid.raster(readPNG("../reports/kmeans_results.png"))
+```
+
+Examining these basis variables, we can come to a few conclusions:
+
+* Cluster 1 respondents have a child, Cluster 2 don't
+* Cluster 5 respondents are the most brand savvy, while those in cluster 3 are the least. Cluster 5 respondents are self aware, shop for the latest brands, and believe that they earn money to spend on themselves.
+* On similar lines, cluster 5 are phone app lovers, while those in 3 arn't
+* For the most part, all clusters have respondents who view themselves with strong personalities, though cluster 3 and 4 show lower agreement than the other clusters
+* Cluster 1 is unmarried while cluster 2 is almost all married respondents
+* Cluster 5 is very strongly a frequent user of phone applications - social, video, music, and for communication. In contrast, cluster 4 has a stronger negative view of technology
+* Clusters 4 and 5 are the youngest, predominantly respondents who are 18-24 years old. Cluster 2 is older respondents: 40 - 55 years old.
+
+Going through all the basis variables, we can come up with a few market segmentation profiles in order to develop a customized marketing plan. At a very high level of abstraction, the cluster results can be summarized as follows:
+
+```{r fig.fullwidth=TRUE, out.width='90%', fig.width=2, cache=TRUE, echo=FALSE, fig.cap='Summary Table'}
+grid.raster(readPNG("../reports/result_out.png"))
+```
+
+\newthought{Recommendations} AppHappy should use these clusters to generate some customized marketing plans. A few key insights are that there is a mixed view towards technology, phone app utilization and adoption. This means that AppHappy's marketing strategy should be a combination of technology-driven and conventional approaches. Furthermore, as shown in the t-SNE analyses, there are very distinct groupings of age, race and phone platform. Thus, depending on the services/products being marketed, the apps developed to market to cluster 5 and 6 can be further customized. Both these clusters are young, driven individuals who are single or married. Cluster 2 is older married individuals who have much higher income than the rest. This group also has moderate views across the board. Group 3 has the lowest positive attitude towards technology adoption and usage. This group needs to be targeting using conventional marketing methods.
+
+# Section VI - Classification & Predictive Modeling
+
 # Section VII - Wrap Up
 
 # References
 
 1. https://lvdmaaten.github.io/tsne/
+1. Gower, J. C. (1971) A general coefficient of similarity and some of its properties, Biometrics 27, 857–874
 1. 

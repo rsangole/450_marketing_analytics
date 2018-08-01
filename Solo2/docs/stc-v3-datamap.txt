@@ -1,0 +1,346 @@
+﻿[record]: Record number
+Open numeric response
+
+[uuid]: Respondent identifier
+Open text response
+
+
+[vList3]: Groups for STC ed on cell
+Values: 1 or 2
+ 1 or 2 = Owns or has owned STC remote or audio accessory 
+ other = not an STC  customer and has not ever been
+
+
+
+
+[DCM1_1]: DCM Task: 1
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_2]: DCM Task: 2
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_3]: DCM Task: 3
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_4]: DCM Task: 4
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_5]: DCM Task: 5
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_6]: DCM Task: 6
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_7]: DCM Task: 7
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_8]: DCM Task: 8
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_9]: DCM Task: 9
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_10]: DCM Task: 10
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_11]: DCM Task: 11
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_12]: DCM Task: 12
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_13]: DCM Task: 13
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_14]: DCM Task: 14
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_15]: DCM Task: 15
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_16]: DCM Task: 16
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_17]: DCM Task: 17
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_18]: DCM Task: 18
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_19]: DCM Task: 19
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_20]: DCM Task: 20
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_21]: DCM Task: 21
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_22]: DCM Task: 22
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_23]: DCM Task: 23
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_24]: DCM Task: 24
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_25]: DCM Task: 25
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_26]: DCM Task: 26
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_27]: DCM Task: 27
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_28]: DCM Task: 28
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_29]: DCM Task: 29
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_30]: DCM Task: 30
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_31]: DCM Task: 31
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_32]: DCM Task: 32
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_33]: DCM Task: 33
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_34]: DCM Task: 34
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_35]: DCM Task: 35
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+[DCM1_36]: DCM Task: 36
+Values: 1-3
+ 1=Option 1
+ 2=Option 2
+ 3=Option 3
+
+
+STT2: How interested are you in purchasing or doing each of the following in the next 12 months?
+Values: 1-10
+ 10=Extremely Interested 10
+ 9=9
+ 8=8
+ 7=7
+ 6=6
+ 5=5
+ 4=4
+ 3=3
+ 2=2
+ 1=Not At All Interested 1
+ [STT2r1] Purchasing a new tablet
+ [STT2r2] Purchasing a new smart phone
+ [STT2r3] Using cloud storage for storing your personal digital content
+ [STT2r4] Taking an online course to improve relevant skills
+
+[D1]: What is your gender?
+Values: 1-2
+ 1=Male
+ 2=Female
+
+[D2]: What is your age?
+Values: 1-7
+ 1=Under 18
+ 2=18-24
+ 3=25-34
+ 4=35-44
+ 5=45-54
+ 6=55-64
+ 7=65 or older
+
+[D3]: Are you a parent?
+Values: 1-2
+ 1=Yes
+ 2=No
+
+D4: What are the age(s) of the children living in your household?
+Values: 0-1
+ 0=Unchecked
+ 1=Checked
+ [D4r1] One or more children age 2 or younger
+ [D4r2] One or more children between 3 and 5
+ [D4r3] One or more children between 6 and 12
+ [D4r4] One or more children between 13 and 18
+ [D4r5] One or more children over the age of 18
+ [D4r6] No children in your household
+
+[D5]: Which of the following most closely describes your total annual household income from all sources and before taxes for 2010?
+Values: 1-8
+ 1=Under $25,000
+ 2=$25,000 but less than $35,000
+ 3=$35,000 but less than $50,000
+ 4=$50,000 but less than $75,000
+ 5=$75,000 but less than $100,000
+ 6=$100,000 but less than $200,000
+ 7=$200,000 or more
+ 8=I prefer not to answer
+
+[D6]: In which state do you live?
+Values: 1-53
+ 1=Alabama
+ 2=Alaska
+ 3=Arizona
+ 4=Arkansas
+ 5=California
+ 6=Colorado
+ 7=Connecticut
+ 8=Delaware
+ 9=District of Columbia
+ 10=Florida
+ 11=Georgia
+ 12=Hawaii
+ 13=Idaho
+ 14=Illinois
+ 15=Indiana
+ 16=Iowa
+ 17=Kansas
+ 18=Kentucky
+ 19=Louisiana
+ 20=Maine
+ 21=Maryland
+ 22=Massachusetts
+ 23=Michigan
+ 24=Minnesota
+ 25=Mississippi
+ 26=Missouri
+ 27=Montana
+ 28=Nebraska
+ 29=Nevada
+ 30=New Hampshire
+ 31=New Jersey
+ 32=New Mexico
+ 33=New York
+ 34=North Carolina
+ 35=North Dakota
+ 36=Ohio
+ 37=Oklahoma
+ 38=Oregon
+ 39=Pennsylvania
+ 40=Rhode Island
+ 41=South Carolina
+ 42=South Dakota
+ 43=Tennessee
+ 44=Texas
+ 45=Utah
+ 46=Vermont
+ 47=Virginia
+ 48=Washington
+ 49=West Virginia
+ 50=Wisconsin
+ 51=Wyoming
+ 52=U.S. Territory
+ 53=Not in the United States

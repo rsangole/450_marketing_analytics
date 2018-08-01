@@ -59,3 +59,38 @@ convert_to_effectcodes <- function(df){
   }
   result_df %>% reduce(bind_cols)
 }
+
+plot_runid_bwplots <- function(HBMNL_obj, run_id){
+  betas_from_draws <- as_tibble(HBMNL_obj$betadraw[,,run_id])
+  names(betas_from_draws) <- names(xdf)
+  betas_from_draws %>%
+    tibble::rownames_to_column(var = 'id') %>%
+    reshape2::melt(id = 'id') %>%
+    lattice::bwplot(value~variable,.,panel=function(x,y,...){panel.bwplot(x,y,...);panel.abline(h = 0,col = 'darkgray',lty = 2)}, main = paste0('Beta Values for all respondents for simulation run #', run_id), scales = list(x=list(rot=45)))
+}
+
+plot_respondent_runcharts <- function(HBMNL_obj, respondent_id, plottype = 1:2,burnoff = NULL){
+  respondent_id_level_beta_runchart <- as_tibble(t(HBMNL_obj$betadraw[respondent_id,,]))
+  names(respondent_id_level_beta_runchart) <- names(xdf)
+  respondent_id_level_beta_runchart %<>%
+    tibble::rownames_to_column(var = 'id') %>%
+    reshape2::melt(id = 'id') %>%
+    mutate(id = as.numeric(id))
+  if(1 %in% plottype){
+    print(xyplot(value~id|variable,respondent_id_level_beta_runchart,type='l',
+                 panel=function(...){panel.abline(h=0,col='gray',lty=1);panel.xyplot(...)},
+                 main = paste0('Beta estimation run chart for Respondent ',respondent_id)))
+  }
+  if(2 %in% plottype){
+    if(is.null(burnoff)){
+      nrows <- max(respondent_id_level_beta_runchart$id)
+      burnoff <- (0.8*nrows):nrows
+    }
+    densityplot(~value|variable,
+                respondent_id_level_beta_runchart[respondent_id_level_beta_runchart$id %in% burnoff,],plot.points=F,
+                panel=function(...){
+                  panel.abline(v=0,col='gray',lty=1);
+                  panel.densityplot(...)},
+                main = paste0('Density Plot for Respondent ',respondent_id))
+  }
+}

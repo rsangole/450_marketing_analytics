@@ -1,3 +1,6 @@
+library(doMC)
+doMC::registerDoMC(cores = 4)
+
 main_mat <- read_tsv('data/stc-dc-task-cbc -v3(1).csv')
 head(main_mat)
 # xmat <- efcode.attmat.f(as.matrix(main_mat[,c("screen", "RAM", "processor", "price", "brand")]))
@@ -40,34 +43,28 @@ for (i in 1:424) {
 lgtdata[[1]]
 
 
-lgtdata100 <- lgtdata[1:50]
-mcmctest <- list(R=5000,keep=5)
+# lgtdata100 <- lgtdata[1:50]
+lgtdata100 <- lgtdata
+mcmctest <- list(R=250000,keep=10)
 Data1 <- list(p=3,lgtdata=lgtdata100)
 testrun1 <- rhierMnlDP(Data = Data1, Mcmc = mcmctest)
 
+saveRDS(testrun1, file = 'cache/testrun1_250k.Rdata')
+
 names(testrun1)
-
 dim(testrun1$betadraw)
+plot_runid_bwplots(testrun1, 1000)
+plot_respondent_runcharts(testrun1, 300)
 
-run_id <- 1000
-betas_from_draws <- as_tibble(testrun1$betadraw[,,run_id])
-names(betas_from_draws) <- names(xdf)
-betas_from_draws %>%
-  tibble::rownames_to_column(var = 'id') %>%
-  reshape2::melt(id = 'id') %>%
-  lattice::bwplot(value~variable,.,panel=function(x,y,...){panel.bwplot(x,y,...);panel.abline(h = 0,col = 'darkgray',lty = 2)}, main = paste0('Beta Values for all respondents for simulation run #', run_id))
+burnoff <- -1:-200000
 
-respondent_id <- 1
-burnoff <- -1:-700
-respondent_id_level_beta_runchart <- as_tibble(t(testrun1$betadraw[respondent_id,,]))
-names(respondent_id_level_beta_runchart) <- names(xdf)
-respondent_id_level_beta_runchart %<>%
-  tibble::rownames_to_column(var = 'id') %>%
-  reshape2::melt(id = 'id') %>%
-  mutate(id = as.numeric(id))
-xyplot(value~id|variable,respondent_id_level_beta_runchart,type='l',
-       main = paste0('Beta estimation run chart for Respondent ',respondent_id))
-densityplot(~value|variable,respondent_id_level_beta_runchart[burnoff,],plot.points=F,
-            panel=function(...){panel.abline(v=0,col='gray',lty=1);panel.densityplot(...)},
-            main = paste0('Density Plot for Respondent ',respondent_id))
+plot(testrun1$loglike)
+
+table(testrun1$Istardraw)
+
+zownertest = matrix(scale(zowner,scale = F),ncol = 1)
+Data2 <- list(p=3,lgtdata=lgtdata100,z=zownertest)
+testrun2 <- rhierMnlDP(Data = Data2, Mcmc = mcmctest)
+
+saveRDS(testrun1, file = 'cache/testrun2_250k.Rdata')
 

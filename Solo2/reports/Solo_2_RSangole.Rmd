@@ -1,62 +1,25 @@
 ---
 title: "R Notebook"
-output: html_notebook
+fontsize: 10pt
+output:
+  pdf_document: 
+    df_print: kable
+    highlight: tango
+    toc: no
+  html_notebook: default
+urlcolor: blue
 ---
 ```{r include=FALSE}
-main_mat <- read_tsv('../data/stc-dc-task-cbc -v3(1).csv')
-head(main_mat)
-xdf <- convert_to_effectcodes(main_mat[,c("screen", "RAM", "processor", "price", "brand")])
-pricevec = main_mat$price - mean(main_mat$price)
-brandsmat <- xdf %>% select(starts_with('brand'))
-brands_pricemat <- brandsmat * pricevec
-names(brands_pricemat) <- paste0(names(brands_pricemat),'price')
-xdf <- as_tibble(cbind(xdf, brands_pricemat))
-# xmat has dimensions (108 x 14) == (36 x 3) x 14 == (#questions x #choices/q) x (#dummy variables)
-head(xdf)
-dim(xdf)
-xmat <- as.matrix(xdf)
-```
+suppressMessages(library('reshape2'))
+suppressMessages(library('plyr'))
+suppressMessages(library('tidyverse'))
+suppressMessages(library('stringr'))
+suppressMessages(library('bayesm'))
+suppressMessages(library('lattice'))
+suppressMessages(library('magrittr'))
+suppressMessages(library('bayesm'))
+suppressMessages(library('dummies'))
 
-```{r include=FALSE}
-load('../data/stc-cbc-respondents-v3(1).RData')
-ydata <- as_tibble(resp.data.v3) %>%
-  select(starts_with('DCM', ignore.case = F))
-# ydata is the response from the discrete choice survey
-# dimensions are (424 x 36) == (#resp x #ques)
-ydata
-
-table(complete.cases(ydata))
-ydata <- na.omit(ydata)
-
-ymat <- as.matrix(ydata)
-
-zowner <- ifelse(is.na(resp.data.v3$vList3),0,1)
-
-lgtdata <- NULL
-for (i in 1:424) {
-  lgtdata[[i]] <- list(y=ymat[i,],X=xmat)
-}
-```
-
-```{r eval=FALSE, include=FALSE}
-mcmctest <- list(R=100000,keep=10)
-Data1 <- list(p=3,lgtdata=lgtdata)
-testrun1 <- rhierMnlDP(Data = Data1, Mcmc = mcmctest)
-saveRDS(testrun1, file = '../cache/testrun1_250k.Rdata')
-```
-```{r eval=FALSE, include=FALSE}
-zownertest = matrix(scale(zowner,scale = F),ncol = 1)
-Data2 <- list(p=3,lgtdata=lgtdata,Z=zownertest)
-testrun2 <- rhierMnlDP(Data = Data2, Mcmc = mcmctest)
-saveRDS(testrun2, file = '../cache/testrun2_250k.Rdata')
-```
-
-```{r include=FALSE}
-testrun1 <- read_rds('../cache/testrun1_250k.Rdata')
-testrun2 <- read_rds('../cache/testrun2_250k.Rdata')
-```
-
-```{r include=FALSE}
 convert_to_effectcodes <- function(df) {
   result_df <- list()
   for (i in 1:ncol(df)) {
@@ -69,24 +32,93 @@ convert_to_effectcodes <- function(df) {
   result_df %>% reduce(bind_cols)
 }
 
-plot_runid_bwplots <- function(HBMNL_obj, run_id,...) {
-  betas_from_draws <- as_tibble(HBMNL_obj$betadraw[, , run_id])
+plot_allresp_avgbeta <- function(HBMNL_obj, removeinteractions = T,...) {
+  betas_from_draws <- apply(HBMNL_obj$betadraw[,,9000:10000],c(1,2),mean)
+  betas_from_draws <- as_tibble(betas_from_draws)
   names(betas_from_draws) <- names(xdf)
-  betas_from_draws <- exp(betas_from_draws)
+  if(removeinteractions){
+    betas_from_draws %<>% dplyr::select(dplyr::one_of(head(names(xdf),-3)))
+  }
+  betas_from_draws %>%
+    tibble::rownames_to_column(var = 'id') %>%
+    reshape2::melt(id = 'id') %>%
+    lattice::densityplot(
+      ~ value | variable, .,
+      panel = function(...) {
+        panel.abline(v = 0, col = 'darkgray', lty = 1);
+        panel.densityplot(plot.points=F,...)
+      },
+      main = paste0('Avg Beta Values for all respondents for simulations 9000-10,000'),
+      # scales = list(x = list(rot = 45)),
+      ...
+    )
+}
+
+plot_allresp_avgbeta_bwplot <- function(HBMNL_obj, removeinteractions = T,...) {
+  betas_from_draws <- apply(HBMNL_obj$betadraw[,,9000:10000],c(1,2),mean)
+  betas_from_draws <- as_tibble(betas_from_draws)
+  names(betas_from_draws) <- names(xdf)
+  if(removeinteractions){
+    betas_from_draws %<>% dplyr::select(dplyr::one_of(head(names(xdf),-3)))
+  }
   betas_from_draws %>%
     tibble::rownames_to_column(var = 'id') %>%
     reshape2::melt(id = 'id') %>%
     lattice::bwplot(
-      value ~ variable,
-      .,
-      panel = function(x, y, ...) {
-        panel.bwplot(x, y, ...)
-        panel.abline(h = 0, col = 'darkgray', lty = 2)
+      value ~ variable, .,
+      panel = function(...) {
+        panel.abline(h = 0, col = 'black', lty = 1,lwd=.5);
+        panel.bwplot(...)
       },
-      main = paste0('Beta Values for all respondents for simulation run #', run_id),
+      main = paste0('Avg Beta Values for all respondents for simulations 9000-10,000'),
       scales = list(x = list(rot = 45)),
       ...
     )
+}
+
+plot_runid_bwplots <- function(HBMNL_obj, run_id, h=0, plottype=1, removeinteractions = T,...) {
+  betas_from_draws <- as_tibble(HBMNL_obj$betadraw[, , run_id])
+  names(betas_from_draws) <- names(xdf)
+  if(removeinteractions){
+    betas_from_draws %<>% dplyr::select(dplyr::one_of(head(names(xdf),-3)))
+  }
+  # betas_from_draws <- exp(betas_from_draws)
+  # betas_from_draws <- betas_from_draws/(1+exp(betas_from_draws))
+  if(plottype==1){
+    return(
+    betas_from_draws %>%
+      tibble::rownames_to_column(var = 'id') %>%
+      reshape2::melt(id = 'id') %>%
+      lattice::bwplot(
+        value ~ variable,
+        .,
+        panel = function(x, y, ...) {
+          panel.abline(h = h, col = 'darkgray', lty = 2);
+          panel.bwplot(x, y, ...)
+        },
+        main = paste0('Beta Values for all respondents for simulation run #', run_id),
+        scales = list(x = list(rot = 45)),
+        ...
+      )
+    )
+  }
+  if(plottype==2){
+      return(
+        betas_from_draws %>%
+        tibble::rownames_to_column(var = 'id') %>%
+        reshape2::melt(id = 'id') %>%
+        lattice::densityplot(
+          ~value| variable,
+          .,
+          panel = function(...) {
+            panel.abline(v = 0, col = 'darkgray', lty = 1);
+            panel.densityplot(plot.points=F,...)
+          },
+          main = paste0('Beta Values for all respondents for simulation run #', run_id),
+          ...
+          )
+    )
+  }
 }
 
 plot_respondent_runcharts <-
@@ -136,7 +168,57 @@ plot_respondent_runcharts <-
 
 ```
 
-```{r Create Long Datasets}
+```{r include=FALSE}
+main_mat <- read_tsv('../data/stc-dc-task-cbc -v3(1).csv')
+head(main_mat)
+xdf <- convert_to_effectcodes(main_mat[,c("screen", "RAM", "processor", "price", "brand")])
+pricevec = main_mat$price - mean(main_mat$price)
+brandsmat <- xdf %>% select(starts_with('brand'))
+brands_pricemat <- brandsmat * pricevec
+names(brands_pricemat) <- paste0(names(brands_pricemat),'price')
+xdf <- as_tibble(cbind(xdf, brands_pricemat))
+# xmat has dimensions (108 x 14) == (36 x 3) x 14 == (#questions x #choices/q) x (#dummy variables)
+xmat <- as.matrix(xdf)
+```
+
+```{r include=FALSE}
+load('../data/stc-cbc-respondents-v3(1).RData')
+ydata <- as_tibble(resp.data.v3) %>%
+  select(starts_with('DCM', ignore.case = F))
+# ydata is the response from the discrete choice survey
+# dimensions are (424 x 36) == (#resp x #ques)
+
+ydata <- na.omit(ydata)
+
+ymat <- as.matrix(ydata)
+
+zowner <- ifelse(is.na(resp.data.v3$vList3),0,1)
+
+lgtdata <- NULL
+for (i in 1:424) {
+  lgtdata[[i]] <- list(y=ymat[i,],X=xmat)
+}
+```
+
+```{r eval=FALSE, include=FALSE}
+mcmctest <- list(R=100000,keep=10)
+Data1 <- list(p=3,lgtdata=lgtdata)
+testrun1 <- rhierMnlDP(Data = Data1, Mcmc = mcmctest)
+saveRDS(testrun1, file = '../cache/testrun1_250k.Rdata')
+```
+```{r eval=FALSE, include=FALSE}
+zownertest = matrix(scale(zowner,scale = F),ncol = 1)
+Data2 <- list(p=3,lgtdata=lgtdata,Z=zownertest)
+testrun2 <- rhierMnlDP(Data = Data2, Mcmc = mcmctest)
+saveRDS(testrun2, file = '../cache/testrun2_250k.Rdata')
+```
+
+```{r include=FALSE}
+testrun1 <- read_rds('../cache/testrun1_250k.Rdata')
+testrun2 <- read_rds('../cache/testrun2_250k.Rdata')
+```
+
+```{r Create Long Datasets, include=FALSE}
 xdf_long <- main_mat
 xdf_long$choice.set <- paste0('DCM1_',xdf_long$choice.set)
 ydata_long <- ydata %>% mutate(resp_id = 1:nrow(ydata))
@@ -144,26 +226,33 @@ ydata_long <- ydata_long %>% melt(id.vars='resp_id') %>% arrange(resp_id)
 ydata_long <- as_tibble(ydata_long)
 ydata_long %<>% left_join(xdf_long, by = c('variable'='choice.set'))
 ydata_long_filtered <- ydata_long %>%  filter(value==choice.ID) %>% mutate(value=NULL)
-ydata_long
-ydata_long_filtered
 ```
 
+# Methodology Discussion
 
-# Deciding the burn in period
+## Input Data
+## Data Preparation
+## Modeling Approach
 
-Visually evaluating a the runcharts for a few respondents, I have decided to use beta estimates from runs 9000 to 10,000 for all future calculations, keeping 1 to 9000 as the burn in period for stablization.
+# Final Recommendation to STC
 
-```{r}
-plot_respondent_runcharts(testrun1, 181, plottype = 1)
-plot_respondent_runcharts(testrun1, 281, plottype = 1)
-```
+# Modeling Results
 
+## Performance Metrics
 
-# Interpret your model results in regard to the attributes' effects on stated preferences.
+### Confusion Matrix
+### AUC & ROC
+### Prediction across Choice Sets
 
-## Raw Choice Counts: Are any alternatives highly preferred by all the respondents?
+## Deciding the burn in period
 
-A quick look into the responses of all 424 respondents pooled together reveals some high level insights. These are simple univariate looks into the data, nevertheless, they offer some insights. Histograms for each of the 5 attributes, where the height of each bar represents the number of respondents who have selected a choice-alternative containing that respective attribute level shows us that:
+After visually evaluating the runcharts for a few respondents, I have decided to use beta estimates from runs 9000 to 10,000 for all future calculations, keeping 1 to 9000 as the burn in period for stablization. Refer to [burnin figure](#burnin) for a run-chart showing this stablization.
+
+## Q3 - Interpret your model results in regard to the attributes' effects on stated preferences.
+
+### Raw Choice Counts: Are any alternatives highly preferred by all the respondents?
+
+A quick look into the responses of all 424 respondents pooled together reveals some high level insights. These are simple univariate looks into the data, nevertheless, they offer some insights. [Histograms](#resp_hist) for each of the 5 attributes, where the height of each bar represents the number of respondents who have selected a choice-alternative containing that respective attribute level shows us that:
 
 * Price = 0, i.e. the lowest price of $199 is the most preferred, while Price = 2 ($399) is the least preferred
 * Processor = 0, i.e. 1.5Ghz is very strongly the least preferred, with the other two equally preferred
@@ -173,52 +262,39 @@ A quick look into the responses of all 424 respondents pooled together reveals s
 
 Interestingly, `choice.ID` which represents the selected alternative amongst each choice is strongly leaning towards the right, with 43% of the respondents selecting choice #3.
 
-```{r fig.show='50%', message=FALSE, warning=FALSE, paged.print=FALSE}
-purrr::map2(ydata_long_filtered %>% select(-resp_id,-variable),
-     names(ydata_long_filtered %>% select(-resp_id,-variable)),
-     ~histogram(.x,main=paste0('Attribute: ',.y),xlab='Alternative #'))
-```
+### For all respondents, do some attributes indicate strong preferences?
 
-## For all respondents, do some attributes indicate strong preferences?
+We pool together the average value of the estimated beta coefficients for all the respondents for the simulation runs 9000 to 10000. Thus, we have a matrix of 424 x 14, where each row represents the average beta coefficients for each respondent for the 14 attributes (including 3 interaction terms). The best way to visualize this distribution is using the density plot below, or a [box plot](#overall_beta) as shown in the appendix. Combining these two visuals representations of the data, including the numerical summary of the coefficients in the [appendix](#overall_beta_table), we can gain some valuable insights into the minds of the respondents.
 
-```{r}
-plot_runid_bwplots(testrun1, 10000, ylim=c(-1,20))
-```
+Interpreting the average values in [table 2](#overall_beta_table), we can see that:
+1. Brand: STC is very well positioned in the electronic market. Consumers, on average, perfer Somesong, Pear and Gaggle 48%, 29% and 52% less than they prefer STC, everything else kept constant.
+1. Price: Consumers are *extremely* price sensitive. Against a baseline of 199 USD, consumers will prefer a price point of 299 USD only 10% of the times, and virtually never prefer a price of 399 USD. 
+1. Processor: The conclusions for processor are clear - The higher the processing power, the more the consumers like it. Consumers prefer a 2 GHz processor 30 times more than a 1.5 Ghz processor, while they prefer a 3 GHz processor 40 times more than a 1.5 GHz processor. 
+1. RAM: 16GB is prefered 2x more than 8GB RAM, while 32GB is prefered 3x more than 8GB RAM, everything else kept constant.
+1. Screen: A 7 inch screen is prefered only 7% more than the smaller 5 inch screen. However, a 10 inch screen is prefered 110% over the 5 inch. This is a very strong signal that, on average, consumers prefer much larger screens for their tablets.
 
-```{r}
-beta_means_tr1 <- apply(testrun1$betadraw[,,9000:10000],c(1,2),mean)
-beta_means_tr1 <- as_tibble(beta_means_tr1)
-names(beta_means_tr1) <- names(xdf)
-head(beta_means_tr1,4) %>% knitr::kable(digits = 2,row.names = T,caption = 'Average Beta Coeff for First 4 Respondents, based on Simulation runs 9000-10,000',align = 'c')
-```
+However, it's important to remember that this is an interpretation of the average customer sentiment about these attributes, and decisions need to be taken wisely. We can see in the density plot below how much this sentiment varies for some of the attributes. Brand, for example, shows fairly symmetric behavior about zero indicating that respondents do have brand preferences. RAM2 (32GB) and processor2 (2.5 GHz) are very right skewed indicating that overall, the market expects large amounts of both attributes. Similarly for price2 ($399), the sentiment is quite consistently negative. The [box plot](#overall_beta) does show a large number of outliers for all attributes, indicating that such insights are not at all homogeneous. 
 
-```{r}
-colMeans(beta_means_tr1) %>% as.matrix() %>% as.data.frame() %>% rownames_to_column(var = 'Attribute') %>% rename('logOddRatio'=V1) %>% mutate(OddRatio = exp(logOddRatio)) %>% knitr::kable(digits = 2, align = 'c', caption = 'Odds Ratio for Model 1, Averaged Beta Coef for all respondents')
+```{r out.width= '70%', fig.align='center', echo=FALSE}
+plot_allresp_avgbeta(testrun1, xlim=c(-3,3),lwd=2)
 ```
 
 
 
-```{r}
-plot_respondent_runcharts(testrun1, 281, plottype = 2)
-```
+## Q4 - Study of price sensitivity by brands
 
-
-# Answer Obee's question about whether price sensitivity varies over brands.
-
-
-```{r}
-beta_means %>% 
-  select(contains('brand')) %>% 
+```{r out.width= '70%', fig.align='center', include=FALSE}
+beta_means_tr1 %>% 
+  select(ends_with('price')) %>% 
   tibble::rownames_to_column(var = 'id') %>%
   reshape2::melt(id = 'id') %>%
-  mutate(id = as.numeric(id)) %>%
-  lattice::densityplot(~value|variable,.,auto.key=T,panel=function(...){panel.abline(v = 0,col='darkgray');panel.densityplot(plot.points=F,...)})
-  # lattice::bwplot(value~variable,.,panel=function(x,y,...){panel.bwplot(x,y,...);panel.abline(h = 0,col = 'darkgray',lty = 2)}, main = paste0('Beta Values for Brand*Price Interactions'), scales = list(x=list(rot=45)))
+  lattice::densityplot(~value|variable,.,auto.key=T,main = paste0('Beta Values for Brand*Price Interactions'),xlim=c(-1,1),lwd=2,
+                       panel=function(...){panel.abline(v = 0,col='darkgray');panel.densityplot(plot.points=F,...)})
 ```
 
-# Assess what impact, if any, ownership of a STC product has on the effects of attributes on preferences.
+## Q5 - Impact of ownership of an STC product on consumer preferences
 
-```{r}
+```{r out.width= '70%', fig.align='center', include=FALSE}
 delta_draws <- testrun2$Deltadraw[9000:10000,1:11]
 delta_draws <- as_tibble(delta_draws); names(delta_draws) <- names(xdf)[1:11]
 delta_means <- colMeans(delta_draws)
@@ -231,13 +307,61 @@ delta_draws %>% melt(value.name = 'value') %>%
   dotplot(variable~value,.,panel=function(...){panel.abline(v = 0,col='darkgray',lwd=.5,...);panel.dotplot(alpha=0.3,cex=.5,...);panel.dotplot(x=delta_means$value,y=delta_means$attribute,col='red',lty = 0,pch=23,cex=1)},sub='Red points indicate means',main='Delta Draw Coefficients for Simulations 9000-10000')
 ```
 
+## Q6 - Prediction on additional scenarios
 
-# Using your HB model results, predict choices for Obee's two additional scenarios.
+## Q7 - Attribute level partworths calculations
 
-# Describe how you would calculate attribute level partworths for Obee's respondents using your model results. Your description should be detailed enough for a programmer unfamiliar with conjoint measurement to code the calculations.
+## Q8 - Attribute importances for respondents
 
-# Describe how you'd calculate attribute importances for the respondents with enough detail for your hypothetical programmer.
+## Q10 - Comparison of Performance between two models
 
-# In your report for this assignment, be sure to address each of the above items. Include in your report descriptions of how you prepared your data for modeling, and your modeling procedure. Include any factors or limitations that Obee and STC should consider in using your results to decide what tablet to produce. What tablet do you think STC should go to market with?
+- Conf Matrix / Accuracy / AUC based discussion
 
-# Do 2 by estimating two (2) MNL models, one that includes a covariate indicating previous ownership of a STC product, and one without this covariate. How do the results compare? Is the covariate a significant predictor of anything?
+\newpage
+
+# Appendix
+
+#### Burn-in Figure {#burnin}
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='70%'}
+plot_respondent_runcharts(testrun1, 281, plottype = 1)
+```
+
+#### Histograms of attribute responses for all respondents {#resp_hist}
+
+```{r out.width='30%', message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+purrr::walk2(ydata_long_filtered %>% select(-resp_id,-variable),
+     names(ydata_long_filtered %>% select(-resp_id,-variable)),
+     ~plot(histogram(.x,main=paste0('Attribute: ',.y),xlab='Alternative #')))
+```
+
+#### Overall beta values for all respondents {#overall_beta}
+```{r out.width= '70%', fig.align='center', echo=FALSE}
+plot_allresp_avgbeta_bwplot(testrun1, ylim=c(-5,4))
+```
+
+#### Overall beta values for all respondents {#overall_beta_table}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# betas_from_draws <- apply(testrun1$betadraw[,,9000:10000],c(1,2),mean)
+# betas_from_draws <- as_tibble(betas_from_draws)
+# names(betas_from_draws) <- names(xdf)
+# betas_from_draws %>%  dplyr::select(dplyr::one_of(head(names(xdf),-3))) %>% 
+#   skimr::skim_to_wide() %>% dplyr::select(-n,-type,-missing,-complete,-hist) %>%
+#   mutate(odds_ratio_mean = exp(as.numeric(mean))) %>% 
+#   knitr::kable(digits = 2, align = 'c', caption = 'Overall beta values for all respondents')
+read_csv('brand_insights.csv') %>% 
+  knitr::kable(digits = 2, align = 'c', caption = 'Overall beta values for all respondents')
+```
+
+```{r}
+plot_respondent_runcharts(testrun1, respondent_id = 300)
+```
+
+\newpage
+
+# Code
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=TRUE, paged.print=FALSE}
+x
+```
+

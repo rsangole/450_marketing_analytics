@@ -1,8 +1,8 @@
-prep_nzv <- function(df, nzv=T){
+prep_nzv <- function(df, remove_nzv=T){
   nzvResults <- caret::nearZeroVar(df, foreach = T, saveMetrics = T)
   zv_cols_to_remove <- rownames(nzvResults[nzvResults$zeroVar,])
   df[zv_cols_to_remove] <- NULL
-  if(nzv){
+  if(remove_nzv){
     nzv_cols_to_remove <- rownames(nzvResults[nzvResults$nzv,])
     df[nzv_cols_to_remove] <- NULL
   }
@@ -49,6 +49,12 @@ prep_adult_g_r <- function(df){
   df
 }
 
+prep_removecols <- function(df){
+  df$ACCTNO <- NULL
+  
+  df
+}
+
 data_read <- function(){
   read_csv('input_data/complete_cust_data.csv', col_names = T)
 }
@@ -58,5 +64,6 @@ data_prep_A <- function(df){
   df %>% 
     prep_adultage() %>% 
     prep_adult_g_r() %>% 
-    prep_nzv()
+    prep_nzv() %>% 
+    prep_removecols()
 }

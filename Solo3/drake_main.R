@@ -40,5 +40,6 @@ prep_chr_to_factor <- function(){
 
 
 DF <- readd(df_A)
+glimpse(DF)
 tc(DF$DISC_REG)
 purrtc(DF,'MED')

@@ -10,8 +10,10 @@ source('utils.R')
 
 data_plan <- drake_plan(
   raw_data = data_read(),
-  df_A = data_prep_A(raw_data)
+  df_A = data_prep_A(raw_data,raw_data)
 )
+
+
 
 # Run your work with make().
 data_plan
@@ -34,10 +36,9 @@ nzvResults %>% dplyr::filter(zeroVar)
 prep_chr_to_factor <- function(){
   ADD_TYPE
   AMEX_REG
-  
 }
 
 
 DF <- readd(df_A)
 tc(DF$DISC_REG)
-purrtc(DF,'HH')
+purrtc(DF,'MED')

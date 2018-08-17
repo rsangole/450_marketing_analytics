@@ -1,3 +1,6 @@
+data_read <- function(){
+  read_csv('input_data/complete_cust_data.csv', col_names = T)
+}
 prep_nzv <- function(df, remove_nzv=T){
   nzvResults <- caret::nearZeroVar(df, foreach = T, saveMetrics = T)
   zv_cols_to_remove <- rownames(nzvResults[nzvResults$zeroVar,])
@@ -48,22 +51,47 @@ prep_adult_g_r <- function(df){
   
   df
 }
-
+prep_addbackcols <- function(df, raw_data){
+  df$YTD_SALES_2009 <- raw_data$YTD_SALES_2009
+  df
+}
 prep_removecols <- function(df){
   df$ACCTNO <- NULL
+  df$AMEX_REG <- NULL
+  df$BLOCK <- NULL
+  df$BLOCK_ID <- NULL
+  df$DPBC <- NULL
+  df$FILLER <- NULL
+  df
+}
+prep_tonumeric <- function(df){
+  df$ESTHMVL <- as.numeric(df$ESTHMVL)
+  df$ESTLOANTOVALRNG <- as.numeric(df$ESTLOANTOVALRNG)
+  df$LOAN_TRM <- as.numeric(df$LOAN_TRM)
+  df$EXAGE <- as.numeric(df$EXAGE)
+  df$IMPACT <- as.numeric(df$IMPACT)
+  df$LOR1 <- as.numeric(df$LOR1)
   
   df
 }
-
-data_read <- function(){
-  read_csv('input_data/complete_cust_data.csv', col_names = T)
+prep_refactor <- function(df){
+  df$ETHNIC_DETAIL <- forcats::fct_lump(df$ETHNIC_DETAIL,prop = 0.01)
+  df$ETHNIC_GROUP <- forcats::fct_lump(df$ETHNIC_GROUP,prop = 0.004)
+  df$GEOPIXELCODE <- forcats::fct_lump(df$GEOPIXELCODE,prop = 0.004)
+  
+  df
 }
-
-
-data_prep_A <- function(df){
+prep_cleanups <- function(df){
+  df %>% janitor::clean_names()
+}
+data_prep_A <- function(df,raw_data){
   df %>% 
     prep_adultage() %>% 
     prep_adult_g_r() %>% 
     prep_nzv() %>% 
-    prep_removecols()
+    prep_removecols() %>% 
+    prep_addbackcols(.,raw_data) %>% 
+    prep_tonumeric() %>% 
+    prep_refactor() %>% 
+    prep_cleanups()
 }

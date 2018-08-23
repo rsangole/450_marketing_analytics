@@ -1,6 +1,4 @@
-setwd("C:/Users/Syamala.srinivasan/Google Drive/NorthWestern/Predict450/RProjects")
-##################
-load("XYZ_complete_customer_data_frame.RData")
+load("input_data/XYZ_complete_customer_data_frame.RData")
 ls()
 mydata <- complete.customer.data.frame
 names(mydata)

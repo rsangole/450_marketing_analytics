@@ -1,5 +1,6 @@
-model_get_mice <- function(df,...){
-  mice::mice(data = df %>% dplyr::select(-Y,-LEARNING_TEST),...)
+model_get_mice <- function(input_data,...){
+  subset_data <- input_data %>% dplyr::select(-Y,-LEARNING_TEST)
+  parlmice(data = subset_data,...)
 }
 model_mice_impute <- function(mice_obj, df){
   as_tibble(complete(mice_obj)) %>% 

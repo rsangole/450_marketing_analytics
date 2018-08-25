@@ -61,7 +61,7 @@ prep_adult_g_r <- function(df) {
 }
 prep_removecols <- function(df) {
   df %>%
-    select(
+    dplyr::select(
       -ACCTNO,
       -AMEX_REG,
       -BLOCK,
@@ -96,6 +96,9 @@ prep_tonumeric <- function(df) {
   df$EXAGE <- as.numeric(df$EXAGE)
   df$IMPACT <- as.numeric(df$IMPACT)
   df$LOR1 <- as.numeric(df$LOR1)
+  df$AD2AGE <- as.numeric(df$AD2AGE)
+  df$CTINCIND <- as.numeric(df$CTINCIND)
+  df$EXAGE <- as.numeric(df$EXAGE)
   
   df
 }
@@ -291,7 +294,7 @@ data_prep_keep1 <- function(df){
   )
   df %>% 
     dplyr::select(one_of(keep1)) %>% 
-    mutate(
+    dplyr::mutate(
       OCCUPATION_GROUP = forcats::fct_lump(OCCUPATION_GROUP, prop = 0.03)
     )
 }

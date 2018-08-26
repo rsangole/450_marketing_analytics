@@ -16,7 +16,7 @@ source('lib/data_utils.R')
 source('lib/model_utils.R')
 source('utils.R')
   
-data_plan <- drake_plan(
+data_plan <- plan(
   raw_data = data_read(),
   df = data_prep_A(raw_data),
   df_keep1 = data_prep_keep1(df)

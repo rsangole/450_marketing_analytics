@@ -73,13 +73,13 @@ prep_removecols <- function(df) {
       -DPBC,
       -VETERAN,
       -ZHMDECOP,
-      -ZIP4,
+      # -ZIP4,
       -ZIP9_Supercode,
       -TRACT,
       -MCD_CCD,
-      -LONG,
-      -LAT,
-      -ZIP,
+      # -LONG,
+      # -LAT,
+      # -ZIP,
       -PHOMOWNR,
       -LOAN_KND,
       -PHONEMATCH,
@@ -97,6 +97,11 @@ prep_tonumeric <- function(df) {
   df$IMPACT <- as.numeric(df$IMPACT)
   df$LOR1 <- as.numeric(df$LOR1)
   df$AD2AGE <- as.numeric(df$AD2AGE)
+  df$AD3AGE <- as.numeric(df$AD3AGE)
+  df$AD4AGE <- as.numeric(df$AD4AGE)
+  df$AD5AGE <- as.numeric(df$AD5AGE)
+  df$AD6AGE <- as.numeric(df$AD6AGE)
+  df$AD7AGE <- as.numeric(df$AD7AGE)
   df$CTINCIND <- as.numeric(df$CTINCIND)
   df$EXAGE <- as.numeric(df$EXAGE)
   
@@ -107,7 +112,7 @@ prep_refactor <- function(df) {
   df$ETHNIC_GROUP <- forcats::fct_lump(df$ETHNIC_GROUP, prop = 0.004)
   df$GEOPIXELCODE <- forcats::fct_lump(df$GEOPIXELCODE, prop = 0.004)
   df$M_GLOBAL_Z4 <- forcats::fct_lump(df$M_GLOBAL_Z4, prop = 0.004)
-  
+  df$STINCIND <- forcats::fct_lump(df$STINCIND, n = 50)
   df
 }
 prep_mutates <- function(df){
@@ -119,10 +124,15 @@ prep_mutates <- function(df){
       cusum_qty_till15 = QTY+QTY0+QTY1+QTY2+QTY3+QTY4+QTY5+QTY6+QTY7+QTY8+QTY9+QTY10+QTY11+QTY12+QTY13+QTY14+QTY15,
       # What's the total $ purchased till 15?
       cusum_tot_usd_till15 = TOTAMT0+TOTAMT1+TOTAMT2+TOTAMT3+TOTAMT4+TOTAMT5+TOTAMT6+TOTAMT7+TOTAMT8+TOTAMT9+TOTAMT10+TOTAMT11+TOTAMT12+TOTAMT13+TOTAMT14+TOTAMT15,
+      cusum_tot_usd_12_to_15 = TOTAMT12+TOTAMT13+TOTAMT14+TOTAMT15,
       old_response_15 = RESPONSE15,
       old_response_14 = RESPONSE14,
+      old_response_13 = RESPONSE13,
+      old_response_12 = RESPONSE12,
+      old_response_11 = RESPONSE11,
       cusum_mailers_till15 = TOTAL_MAIL_15,
       mailers_in_15 = SUM_MAIL_15,
+      mailers_in_14 = SUM_MAIL_14,
       PRE2009_SALES = LTD_SALES - YTD_SALES_2009,
       PRE2009_TRANSACTIONS = LTD_TRANSACTIONS-YTD_TRANSACTIONS_2009,
       Y = RESPONSE16

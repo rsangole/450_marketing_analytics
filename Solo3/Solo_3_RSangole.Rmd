@@ -38,6 +38,7 @@ The data required significant pre-preparation before modeling could be done. To 
     * mailers_in_14 : Mailers mailed in recent past, campaign 14
     * PRE2009_SALES : Life-To-Date sales - Year-To-Date-2009 sales
     * PRE2009_TRANSACTIONS : Life-To-Date transactions - Year-To-Date-2009 transactions
+    * lat, and long : For the lattitude and longitude, the left most 4-digit numbers are extracted, and the series are converted to factor variables.
 
 ## EDA
 
@@ -81,29 +82,94 @@ read_csv('search_cats.csv') %>% head(6) %>% knitr::kable(digits = 3, align = 'c'
 The package `caret` is used for all the modeling efforts. This package offers a unified interface to over 200 modeling packages. In addition to this, it offers convinient wrappers to perform cross validation, performance metrics extraction and plotting. In total, three models are attempted:
 
 - Randomforest using the `randomForest` package. [Also attempted was the `parRF` which solves random forest in a parallel multi-core approach.]
-- SVM
 - Naive Bayes
+- Averaged Neural Networks
 
 For each model, different pre-processing steps are testing, which include (but not limited to) centering & scaling variables, YeoJohnson transformation, PCA etc. For each model, tuneable hyperparamters (like `mtry` for randomForests) are selected using 10-fold cross validation on the training dataset, while trying to maximize the ROC AUC value.
 
+# Modeling Results
+
 ## Random Forests
 
-The `randomForest` package within `caret` was used to fit multiple models. 
+The `randomForest` package within `caret` was used to fit multiple models. Three sets of models were build - raw data, scale + centered data, scale + centered + YeoJohnson transformed data. The tuning parameter `mtry` was varied between 
 
 ## Naive Bayes
 
-Naive bayes models are fit from the `klaR` package which allow for 3 tunable parameters. `fL` (Laplace Correction), `usekernel` (Distribution Type: gaussian / nonparametric), `adjust` (Bandwidth Adjustment).
+Naive bayes models are fit from the `klaR` package which allow for 3 tunable parameters. `fL` (Laplace Correction): 0, `usekernel` (Distribution Type): {gaussian / nonparametric}, `adjust` (Bandwidth Adjustment): {0.1, 0.2, 0.4, 0.6}. The optimal tuning parameters can be selected using ROC as the criteria:
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/nb_tune.png') 
+```
+
 
 ## Neural Networks
 
-The `avnnet` package,  Ripley (1996), fits the same neural network model using different random number seeds. All the resulting models are used for prediction. For classification, the model scores are
-first averaged, then translated to predicted classes. Bagging can also be used to create the models. 
+The `avnnet` package,  Ripley (1996), fits the same neural network model using different random number seeds for the starting weights of the neurons. All the resulting models are used for prediction. For classification, the model scores are first averaged, then translated to predicted classes. Bagging can also be used to create the models. Other tuning parameters include the number of internal units, and the decay coefficient. 
 
-# Modeling Results
+## Training Results & Performance Evaluation
+
+In total, 50 number of models are build, including the resampled models built for the 10-fold CV effort. The following graph summarizes the performance of them models, assessed by the AUC ROC, sensitivity and specificity. We can see that:
+
+- Between each model's 10-fold resamples on the training data, the numbers are very tightly distributed. This gives us confidence in the stability of the models to transfer to the test dataset.
+- Across models, the performance is fairly similar with ... performing the best when measured using the AUC ROC metric. Note: these are calculated using the default probability cutoff values of 0.5.
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/bwplot_resamples.png') 
+```
+
+The training set ROC values can be visualized on a density plot for each of the models. Each point is 1 resample within the cross validation. Thus, the following plot is made of 50 models.
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/roc_densityplot.png') 
+```
+
+## Test Set Performance Evaluation
+
+So far, the test set has been untouched. Fitting the models to the test dataset, we can plot the performance of the models on the following chart. Key take aways:
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/test_performance.png') 
+```
+
+- All the models have carried their performance metrics from train to test. This confirms the belief after cross validation that the models have not overfit to the training data.
+- The dashed line at the bottom is the No Information Rate, which is the accuracy achieved if all the observations are simply predicted to be the majority class. Clearly, all the models outperform the NIR.
+- Kappa values, which given an indication of how much better our classification (for a 2 class problem) is than chance alone, shows us that the models are of moderate quality. (Desired kappa is > 0.7).
+- These results are for the default probability cutoff value of 0.5.
+
+## Evaluation of probability cutoff
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/acc_kappa_testset.png') 
+```
+
+# Final Selected model
+
+## Interpretation
+
+## Confusion matrix
+
 
 # Customer Scoring
 
+Applying selected model to the full dataset...
+
+
+
 # Final Recommendation to STC
+
+## Customers to target
+
+## Campaign / Analysis Improvement Ideas
+
+\newpage
+
+# Stretch Goals for this assignment
+
+My personal stretch goals for this assignment were to 
+
+- Understand and apply few methods of imputation using the `mice` package, especially using parallel compute. I was partially able to achive this, but it depended on if I'm using my Mac vs my Windows machine, since the success of `r parallel::makePSOCKcluster()` depends on the underlying operating system's infrastructure.
+- Develop the end to end analysis pipeline using a more production ready coding structure. I learnt the basics of using the `drake` package, it's `makePlan` functions which uniquely hashtag each R object and keep tracability as objects pass from function to function.
+
 
 \newpage
 
@@ -128,6 +194,15 @@ knitr::include_graphics('images/report_mice_num.png')
 ```{r echo=FALSE, out.width='80%'}
 knitr::include_graphics('catvar_auc.png')
 knitr::include_graphics('numvar_auc.png') 
+```
+
+#### Class - Probability Distributions {#classprob}
+ 
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/rffit.nocs.png')
+knitr::include_graphics('images/rffit.nocs.png')
+knitr::include_graphics('images/nbFit.cs.png')
+knitr::include_graphics('images/avnnet.cs.png')
 ```
 
 \newpage

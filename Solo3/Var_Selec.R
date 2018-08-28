@@ -18,11 +18,13 @@ library(future)
 # registerDoParallel(cl)
 # stopCluster(cl)
 
+set.seed(1000)
+
 doMC::registerDoMC(38)
 
 source('lib/data_utils.R')
 source('utils.R')
-trellis.par.set(caretTheme())
+# trellis.par.set(caretTheme())
 
 # ----------------
 raw_data = data_read()
@@ -120,10 +122,10 @@ catdf <- full_df %>% dplyr::select_if(is.factor)
 # missmap(catdf, y.cex = 0); missmap(numdf, y.cex = 0)
 # doMC::registerDoMC(38)
 # registerDoParallel(cl = makeCluster(40))
-# mice_num <- mice(numdf, method = 'rf',m = 5)
+mice_num <- mice(numdf, method = 'rf',m = 5)
 # stopCluster(cl); registerDoSEQ();
 # saveRDS(mice_num,'mice_num_new_er.rdata')
-mice_num <- read_rds('mice_num_new_er.rdata')
+# mice_num <- read_rds('mice_num_new_er.rdata')
 # densityplot(mice_num)
 mice_num_complete <- as_tibble(complete(mice_num))
 
@@ -218,18 +220,34 @@ rfFit.csy <-
     verbose = T
   )
 post_process_rf(rfFit.csy)
-eTFit.cs <-
+# eTFit.cs <-
+#   train(
+#     x = tr_df_X,
+#     y = tr_df_Y,
+#     method = 'extraTrees',
+#     metric = 'ROC',
+#     trControl = ctrl,
+#     ntree = ntree,
+#     tuneGrid = expand.grid(mtry = c(5,7,10,15), numRandomCuts = c(1,2,3)),
+#     preProc = c('center', 'scale')
+#   )
+rfFit.nocs2 <-
   train(
     x = tr_df_X,
     y = tr_df_Y,
-    method = 'extraTrees',
+    method = 'rf',
     metric = 'ROC',
     trControl = ctrl,
     ntree = ntree,
-    tuneGrid = expand.grid(mtry = c(5,7,10,15), numRandomCuts = c(1,2,3)),
-    preProc = c('center', 'scale')
+    tuneGrid = data.frame(mtry = c(20,30,40,50)),
+    # preProc = c('center', 'scale'),
+    verbose = T
   )
 
+saveRDS(rfFit.csy,'rfFit.csy')
+saveRDS(rfFit.cs,'rfFit.cs')
+saveRDS(rfFit.nocs,'rfFit.nocs')
+saveRDS(rfFit.nocs2,'rfFit.nocs2')
 
 ## - NB -->
 ctrl <- trainControl(
@@ -255,12 +273,9 @@ nbFit.cs <-
   )
 nbFit.cs
 plot(nbFit.cs)
-
+saveRDS(nbFit.cs,'nbFit.cs')
 
 ## - NNET -->
-cl <- makeCluster(spec = 30)
-clusterEvalQ(cl, library(foreach));
-registerDoParallel(cl)
 ctrl <- trainControl(
   summaryFunction = twoClassSummary,
   classProbs = T,
@@ -278,35 +293,35 @@ avnnetFit.cs <-
     metric = 'ROC',
     trControl = ctrl,
     ntree = ntree,
-    tuneGrid = expand.grid(size = c(1,2), decay = c(0.1,0.3), bag = c(T,F)),
+    tuneGrid = expand.grid(size = c(1), decay = c(0.1,0.3,0.5), bag = c(F)),
     preProc = c('center', 'scale'),
     verbose = T
   )
-avnnet2Fit.cs <-
-  train(
-    x = tr_df_X,
-    y = tr_df_Y,
-    method = 'avNNet',
-    metric = 'ROC',
-    trControl = ctrl,
-    ntree = ntree,
-    tuneGrid = expand.grid(size = c(2,4,6), decay = c(0.3), bag = c(F)),
-    preProc = c('center', 'scale'),
-    verbose = T
-  )
-avnnet3Fit.cs <-
-  train(
-    x = tr_df_X,
-    y = tr_df_Y,
-    method = 'avNNet',
-    metric = 'ROC',
-    trControl = ctrl,
-    ntree = ntree,
-    tuneGrid = expand.grid(size = c(2), decay = c(0.4,.6), bag = c(F)),
-    preProc = c('center', 'scale'),
-    verbose = T
-  )
-# saveRDS(avnnetFit.cs,'avnnetFit.cs')
+# avnnet2Fit.cs <-
+#   train(
+#     x = tr_df_X,
+#     y = tr_df_Y,
+#     method = 'avNNet',
+#     metric = 'ROC',
+#     trControl = ctrl,
+#     ntree = ntree,
+#     tuneGrid = expand.grid(size = c(2,4,6), decay = c(0.3), bag = c(F)),
+#     preProc = c('center', 'scale'),
+#     verbose = T
+#   )
+# avnnet3Fit.cs <-
+#   train(
+#     x = tr_df_X,
+#     y = tr_df_Y,
+#     method = 'avNNet',
+#     metric = 'ROC',
+#     trControl = ctrl,
+#     ntree = ntree,
+#     tuneGrid = expand.grid(size = c(2), decay = c(0.4,.6), bag = c(F)),
+#     preProc = c('center', 'scale'),
+#     verbose = T
+  # )
+saveRDS(avnnetFit.cs,'avnnetFit.cs')
 # saveRDS(avnnet2Fit.cs,'avnnet2Fit.cs')
 avnnetFit.cs
 plot(avnnetFit.cs)
@@ -316,14 +331,21 @@ post_process_rf(plot(avnnet2Fit.cs))
 stopCluster(cl)
 
 
-# Compare models
+# Load models
+rfFit.cs = read_rds('rfFit.cs')
+rfFit.csy = read_rds('rfFit.csy')
+rfFit.nocs = read_rds('rfFit.nocs')
+nbFit.cs = read_rds('nbFit.cs')
+avnnet2Fit.cs = read_rds('avnnetFit.cs')
 
+
+# Compare models
 model_list <- list(
   'RF - Std' = rfFit.cs,
   'RF - Std + YJ' = rfFit.csy,
   'RF - Raw' = rfFit.nocs,
   'NB' = nbFit.cs,
-  'Avg NNet' = avnnet2Fit.cs
+  'Avg NNet' = avnnetFit.cs 
 )
 
 res <- resamples(x = model_list)
@@ -375,9 +397,13 @@ f_ <- function(x,i,metric) {
                     positive = 'RESPONSE')$overall[[metric]]
   }
 for (position in 1:nrow(grid)) {
-  grid[position,'accuracy'] = (f_(grid$p_seq[position], grid$model_num[position],'Accuracy'))
+  grid[position,'Accuracy'] = (f_(grid$p_seq[position], grid$model_num[position],'Accuracy'))
   grid[position,'Kappa'] = (f_(grid$p_seq[position], grid$model_num[position],'Kappa'))
 }
 grid
-xyplot(accuracy~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name))
-xyplot(Kappa~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name))
+xyplot(Accuracy+Kappa~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name),abline=list(v=0.4,lty=2))
+
+q = factor((result_df[result_df$name=='NB', 'probs'][[1]][[1]][, 2]) > .4, c(F, T), labels = c('NORESPONSE', 'RESPONSE'))
+confusionMatrix(data = q,
+                reference = test_df_Y,
+                positive = 'RESPONSE')

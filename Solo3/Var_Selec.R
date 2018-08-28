@@ -154,7 +154,7 @@ nrow(tr_df_X)==length(tr_df_Y)
 post_process_rf <- function(X){
   print(X)
   plot(X)
-  varImpPlot(X$finalModel)
+  try(varImpPlot(X$finalModel))
   X_CM <- confusionMatrix(
     data = X$pred$pred,
     reference = X$pred$obs,
@@ -282,19 +282,102 @@ avnnetFit.cs <-
     preProc = c('center', 'scale'),
     verbose = T
   )
+avnnet2Fit.cs <-
+  train(
+    x = tr_df_X,
+    y = tr_df_Y,
+    method = 'avNNet',
+    metric = 'ROC',
+    trControl = ctrl,
+    ntree = ntree,
+    tuneGrid = expand.grid(size = c(2,4,6), decay = c(0.3), bag = c(F)),
+    preProc = c('center', 'scale'),
+    verbose = T
+  )
+avnnet3Fit.cs <-
+  train(
+    x = tr_df_X,
+    y = tr_df_Y,
+    method = 'avNNet',
+    metric = 'ROC',
+    trControl = ctrl,
+    ntree = ntree,
+    tuneGrid = expand.grid(size = c(2), decay = c(0.4,.6), bag = c(F)),
+    preProc = c('center', 'scale'),
+    verbose = T
+  )
+# saveRDS(avnnetFit.cs,'avnnetFit.cs')
+# saveRDS(avnnet2Fit.cs,'avnnet2Fit.cs')
 avnnetFit.cs
 plot(avnnetFit.cs)
+avnnet2Fit.cs
+plot(avnnet2Fit.cs)
+post_process_rf(plot(avnnet2Fit.cs))
 stopCluster(cl)
-# p_fun <- function(object, newdata){predict(object, newdata=newdata, type="prob")[,2]}
-# ytrain <- as.numeric(training_df$Y)-1
-# ytest <- as.numeric(test_df$Y)-1
-# train_explainer_classif_rf <- explain(model = crfFit.GR$finalModel,
-#                                       label = "Par_RF",
-#                                       data = training_df[-118],
-#                                       y = ytrain)
-# # predict_function = p_fun)
-# variable_importance(train_explainer_classif_rf, type = 'raw') %>% plot()
-# variable_importance(train_explainer_classif_rf, type = 'ratio') %>% plot()
-# variable_importance(train_explainer_classif_rf, type = 'difference') %>% plot()
-# variable_importance(train_explainer_classif_rf, loss_function = loss_root_mean_square) %>% plot()
-# vi_classif_rf <- variable_importance(explainer_classif_rf, loss_function = loss_root_mean_square)
+
+
+# Compare models
+
+model_list <- list(
+  'RF - Std' = rfFit.cs,
+  'RF - Std + YJ' = rfFit.csy,
+  'RF - Raw' = rfFit.nocs,
+  'NB' = nbFit.cs,
+  'Avg NNet' = avnnet2Fit.cs
+)
+
+res <- resamples(x = model_list)
+dotplot(res)
+bwplot(res)
+
+get_probs <- function(result_obj, new_data){
+  predict(result_obj, new_data, type = 'prob')
+}
+plot_hists <- function(df,id){
+  name <- df[[id,'name']]
+  X <- df[[id,'probs']]
+  X %>% rownames_to_column('rowid') %>% reshape2::melt(data=., value.name='prob') %>% lattice::histogram(~prob|variable,.,main=name)
+}
+
+result_df <- tibble(
+  name = c('RF - Std' ,'RF - Std + YJ',  'RF - Raw' , 'NB' , 'Avg NNet'),
+  result_obj = list(avnnet2Fit.cs,nbFit.cs,rfFit.cs,rfFit.csy,rfFit.nocs)
+)
+result_df$probs <- get_probs(result_df$result_obj, test_df_X)
+
+# map(1:5, ~plot_hists(result_df,.x))
+
+# predProbs <- extractProb(models = model_list, testX = tr_df_X, testY = tr_df_Y)
+# plotClassProbs(predProbs, useObjects = TRUE)
+
+p = 0.5
+result_df <- result_df %>% 
+  mutate(class_hat = purrr::map(probs, ~factor(.x$RESPONSE > p, c(F,T),labels = c('NORESPONSE','RESPONSE'))))
+
+result_df <- result_df %>% 
+  mutate(cm = purrr::map(class_hat, ~confusionMatrix(data = .x, reference = test_df_Y, positive = 'RESPONSE')),
+         test_accuracy = purrr::map_dbl(cm, ~.x$overall[['Accuracy']]),
+         test_kappa =    purrr::map_dbl(cm, ~.x$overall[['Kappa']]),
+         no_info_rate =  purrr::map_dbl(cm, ~.x$overall[['AccuracyNull']]))
+
+result_df
+
+ggplot(result_df,aes(x=test_kappa,y=test_accuracy))+ggrepel::geom_label_repel(aes(label=name))+geom_hline(aes(yintercept = no_info_rate),lty=2)+theme_bw()+labs(title='Test Set Performance Metrics',subtitle='Dotted line: No Information Rate')
+
+
+p_seq <- seq(0.1, to = 0.9, by = 0.1)
+model_num <- 1:5
+grid = expand.grid('p_seq' = p_seq, 'model_num' = model_num)
+f_ <- function(x,i,metric) {
+    q = factor((result_df[[i, 'probs']][, 2]) > x, c(F, T), labels = c('NORESPONSE', 'RESPONSE'))
+    confusionMatrix(data = q,
+                    reference = test_df_Y,
+                    positive = 'RESPONSE')$overall[[metric]]
+  }
+for (position in 1:nrow(grid)) {
+  grid[position,'accuracy'] = (f_(grid$p_seq[position], grid$model_num[position],'Accuracy'))
+  grid[position,'Kappa'] = (f_(grid$p_seq[position], grid$model_num[position],'Kappa'))
+}
+grid
+xyplot(accuracy~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name))
+xyplot(Kappa~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name))

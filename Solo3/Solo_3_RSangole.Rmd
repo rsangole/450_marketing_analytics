@@ -99,10 +99,7 @@ Naive bayes models are fit from the `klaR` package which allow for 3 tunable par
 The `avnnet` package,  Ripley (1996), fits the same neural network model using different random number seeds. All the resulting models are used for prediction. For classification, the model scores are
 first averaged, then translated to predicted classes. Bagging can also be used to create the models. 
 
-
 # Modeling Results
-
-
 
 # Customer Scoring
 

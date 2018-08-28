@@ -73,7 +73,7 @@ prep_removecols <- function(df) {
       -DPBC,
       -VETERAN,
       -ZHMDECOP,
-      # -ZIP4,
+      -ZIP4,
       -ZIP9_Supercode,
       -TRACT,
       -MCD_CCD,
@@ -113,11 +113,14 @@ prep_refactor <- function(df) {
   df$GEOPIXELCODE <- forcats::fct_lump(df$GEOPIXELCODE, prop = 0.004)
   df$M_GLOBAL_Z4 <- forcats::fct_lump(df$M_GLOBAL_Z4, prop = 0.004)
   df$STINCIND <- forcats::fct_lump(df$STINCIND, n = 50)
+  df$ZIP <-  forcats::fct_lump(as.factor(df$ZIP), n = 26)
   df
 }
 prep_mutates <- function(df){
   df %>% 
     mutate(
+      LONG = str_trunc(LONG, width = 4,side = 'right',ellipsis = ''),
+      LAT = str_trunc(LAT, width = 4,side = 'right',ellipsis = ''),
       # How many times has the customer responded in the past, till campaigh 15?
       cusum_resp_till15 = RESPONSE0+RESPONSE1+RESPONSE2+RESPONSE3+RESPONSE4+RESPONSE5+RESPONSE6+RESPONSE7+RESPONSE8+RESPONSE9+RESPONSE10+RESPONSE11+RESPONSE12+RESPONSE13+RESPONSE14+RESPONSE15,
       # How many things were purchased till 15?
@@ -125,11 +128,11 @@ prep_mutates <- function(df){
       # What's the total $ purchased till 15?
       cusum_tot_usd_till15 = TOTAMT0+TOTAMT1+TOTAMT2+TOTAMT3+TOTAMT4+TOTAMT5+TOTAMT6+TOTAMT7+TOTAMT8+TOTAMT9+TOTAMT10+TOTAMT11+TOTAMT12+TOTAMT13+TOTAMT14+TOTAMT15,
       cusum_tot_usd_12_to_15 = TOTAMT12+TOTAMT13+TOTAMT14+TOTAMT15,
-      old_response_15 = RESPONSE15,
-      old_response_14 = RESPONSE14,
-      old_response_13 = RESPONSE13,
-      old_response_12 = RESPONSE12,
-      old_response_11 = RESPONSE11,
+      old_response_15 = factor(RESPONSE15,levels = c(0,1),labels = c('N','Y')),
+      old_response_14 = factor(RESPONSE14,levels = c(0,1),labels = c('N','Y')),
+      old_response_13 = factor(RESPONSE13,levels = c(0,1),labels = c('N','Y')),
+      old_response_12 = factor(RESPONSE12,levels = c(0,1),labels = c('N','Y')),
+      old_response_11 = factor(RESPONSE11,levels = c(0,1),labels = c('N','Y')),
       cusum_mailers_till15 = TOTAL_MAIL_15,
       mailers_in_15 = SUM_MAIL_15,
       mailers_in_14 = SUM_MAIL_14,
@@ -307,4 +310,19 @@ data_prep_keep1 <- function(df){
     dplyr::mutate(
       OCCUPATION_GROUP = forcats::fct_lump(OCCUPATION_GROUP, prop = 0.03)
     )
+}
+
+data_prep_B <- function(df) {
+  char_to_factor_vars <- df %>% select_if(is.character) %>% names
+  df[char_to_factor_vars] <-
+    df[char_to_factor_vars] %>% purrr::map_df(~ as.factor(.x))
+  df$Y <- factor(df$Y,
+                 levels = c(0, 1),
+                 labels = c('NORESPONSE', 'RESPONSE'))
+  df
+}
+
+remove_buyerstatus <- function(df){
+  df %>% 
+    dplyr::filter(BUYER_STATUS == 'ACTIVE')
 }

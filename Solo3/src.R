@@ -275,6 +275,7 @@ crfFit.GR <- train(
   )
 stopCluster(cl); registerDoSEQ(); 
 # saveRDS(crfFit.GR, 'crfFit.GR.rdata')
+crfFit.GR <- read_rds('crfFit.GR.rdata')
 crfFit.GR
 plot(crfFit.GR)
 # plot(crfFit.GR$finalModel)

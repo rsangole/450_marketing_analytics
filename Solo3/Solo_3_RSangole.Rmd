@@ -91,7 +91,11 @@ For each model, different pre-processing steps are testing, which include (but n
 
 ## Random Forests
 
-The `randomForest` package within `caret` was used to fit multiple models. Three sets of models were build - raw data, scale + centered data, scale + centered + YeoJohnson transformed data. The tuning parameter `mtry` was varied between 
+The `randomForest` package within `caret` was used to fit multiple models. Three sets of models were build - raw data, scale + centered data, scale + centered + YeoJohnson transformed data. The tuning parameter `mtry` was varied between 5 and 50. Interestingly, the ROC monotonically increases with `mtry`.
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/rf_tune.png') 
+```
 
 ## Naive Bayes
 
@@ -104,20 +108,25 @@ knitr::include_graphics('images/nb_tune.png')
 
 ## Neural Networks
 
-The `avnnet` package,  Ripley (1996), fits the same neural network model using different random number seeds for the starting weights of the neurons. All the resulting models are used for prediction. For classification, the model scores are first averaged, then translated to predicted classes. Bagging can also be used to create the models. Other tuning parameters include the number of internal units, and the decay coefficient. 
+The `avnnet` package,  Ripley (1996), fits the same neural network model using different random number seeds for the starting weights of the neurons. All the resulting models are used for prediction. For classification, the model scores are first averaged, then translated to predicted classes. Bagging can also be used to create the models. Other tuning parameters include the number of internal units, and the decay coefficient. Lower values of delay without bagging seems to result in a better fit.
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/nnet_tune.png') 
+```
 
 ## Training Results & Performance Evaluation
 
 In total, 50 number of models are build, including the resampled models built for the 10-fold CV effort. The following graph summarizes the performance of them models, assessed by the AUC ROC, sensitivity and specificity. We can see that:
 
 - Between each model's 10-fold resamples on the training data, the numbers are very tightly distributed. This gives us confidence in the stability of the models to transfer to the test dataset.
-- Across models, the performance is fairly similar with ... performing the best when measured using the AUC ROC metric. Note: these are calculated using the default probability cutoff values of 0.5.
+- On average, sensitivity is very high, yet specificity is quite low.
+- Across models, the performance is fairly similar with the randomforest models performing the best, with the neural network models performing the worst. Between the RF models, there doesn't seem to be any significant impact of the variable transformations. *Note:* these are calculated using the default probability cutoff values of 0.5.
 
 ```{r echo=FALSE, out.width='80%'}
 knitr::include_graphics('images/bwplot_resamples.png') 
 ```
 
-The training set ROC values can be visualized on a density plot for each of the models. Each point is 1 resample within the cross validation. Thus, the following plot is made of 50 models.
+The training set ROC values can be visualized on a density plot for each of the models. Each point is 1 resample within the cross validation. 
 
 ```{r echo=FALSE, out.width='80%'}
 knitr::include_graphics('images/roc_densityplot.png') 
@@ -127,39 +136,83 @@ knitr::include_graphics('images/roc_densityplot.png')
 
 So far, the test set has been untouched. Fitting the models to the test dataset, we can plot the performance of the models on the following chart. Key take aways:
 
-```{r echo=FALSE, out.width='80%'}
-knitr::include_graphics('images/test_performance.png') 
-```
-
 - All the models have carried their performance metrics from train to test. This confirms the belief after cross validation that the models have not overfit to the training data.
+- The RF model with the large values of `mtry` clearly outperforms all the other models.
 - The dashed line at the bottom is the No Information Rate, which is the accuracy achieved if all the observations are simply predicted to be the majority class. Clearly, all the models outperform the NIR.
 - Kappa values, which given an indication of how much better our classification (for a 2 class problem) is than chance alone, shows us that the models are of moderate quality. (Desired kappa is > 0.7).
 - These results are for the default probability cutoff value of 0.5.
 
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/test_performance.png') 
+```
+
 ## Evaluation of probability cutoff
+
+To test the impact of the probability cutoff on the model performance, the p-values are varyied from 0.1 to 0.9. As expected accuracy peaks and maintains even at very high values of p, given high class imbalance. However, Kappa peaks at 0.5. [Repeated experiments with different seeds gave me values between 0.4 and 0.5 for maximal Kappa].
 
 ```{r echo=FALSE, out.width='80%'}
 knitr::include_graphics('images/acc_kappa_testset.png') 
 ```
 
+Confusion matrix for the test dataset shows quite acceptable performance:
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/finalresult_cm.png') 
+```
+
 # Final Selected model
 
-## Interpretation
+The final selected model is as follows:
 
-## Confusion matrix
+1. Apply the data transformation rules decribed in the data prep session to new data
+1. For all observations with `BUYER_STATUS` not `ACTIVE`, the response will be zero.
+1. For the remainder of the observations, apply the RF model with `mtry` of 50.
+
+Applying this modeling approach to the entire dataset (above, it was tested on the test dataset only), we can see that we achieve an accuracy of 0.96 (against a NIR of 0.81), with a Kappa of 0.885. Sensitivity and specificity values are both above 0.85. Sensitivity tells us out of the total true positive responses, how many did the model correctly predict, in this case, 87%. The model predicts 339 customers incorrectly. This could adversely impact the financial impact of the campaign. 
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/finalresult_cm_fulldf.png') 
+```
+
+## What are the driving factors behind the predictions?
+
+While the primary purpose of this modeling approach has been predictive accuracy, we can use variable importance plots to understand which variables impact the predictive scores. One point to note is that, if the seed is changed, some of the smaller drivers do change, though the major drivers remain fairly consistent.
+
+The strongest predictors of future response are variables which indicate past responses. `CUSUM_TOT_USD_TILL15` is the cumulative expenditure life to year 2015 by each customer. Similarly, `CUSUM_QTY_TILL15` is the cumulative quantity of goods purchased. (As expected, these are correlated, though the models we've selected are robust to multicollinearity in the X matrix).`CUSUM_RESP_TILL15` indicates how many times has the customer reponded to previous campaigns. The next three variables are various proxy indiators of spending capability (estimated earning range, state estimated income index, and mortgage amount range). The presense of `ZIP` indicates a geographic relevance towards prediction as well.
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('images/varimp.png') 
+```
+
+# Financial estimation for campaign 16
+
+The customer scores need to be calculated based on both - the probability of the customer reponding positively, and the expected revenue from the customer.
+
+Score = P(Positive Response) * Expected Revenue - Cost Of Mailer
+
+In this exercise, we have only calculated the first part of the equation, i.e. the probability of response. To that end, the calculation becomes quite linear - the score is dependent on the relative magnitudes of the revenue and the mailing cost. i.e. If the expected average revenue is $20 per customer, and the mailer costs 3 USD, then following a "mail-everyone" style marketing campaign makes the most sense, since it will maximize revenue. To truly be able to determine a cutoff probability value for the model, and estimate a net revenue per customer and total revenue, we must build a predictive model for net revenue per customer. 
 
 
-# Customer Scoring
+As it stands today, if we assume an average revenue of $15 per customer, a blanket mailing campaign would result in a profit of 47,000 USD for the 4766 customers in the test dataset. This stands against a revenue of only 8460 USD if the 705 customers (with p-val > 0.5) are targeted.
 
-Applying selected model to the full dataset...
+If we look at `RESPONSE16`, we see a total of 2592 customers with a positive response, totaling ~800,000 USD revenue, or 310 USD per customer average revenue. (The total customers expected to respond with the final model is 2383.) 
+
+# Campaign / Analysis Improvement Ideas
+
+Based on the work done so far, I can recommend the following improvements in various regions of the analysis process:
 
 
+1. Data
 
-# Final Recommendation to STC
+- XYZ company should spend efforts to build a better data dictionary for their dataset. While the data seem rich, lack of a rigourous dictionary including thorough definitions, units, acceptable values etc puts the onus on understanding the data on the data scientist who does not have domain expertise
+- Clustering approaches should be investigated on the various portions of the data to develop meaningful variable reduction while preserving the information in the data. This would speed up the analysis process
 
-## Customers to target
+2. Analysis
 
-## Campaign / Analysis Improvement Ideas
+- Predictive models of net revenue per customer need to be built. These can be combined with the classification model build here to provide a better estimate of net revenue per customer, and a better strategy for the next campaign.
+- The initial data selection strategy employed here was using univariate models. Other variable selection strategies could be investigated.
+- Dimension reduction techniques like PCA, ICA have not been thoroughly investigated, and may provide better models
+- Incorporation of a cost matrix while hyperparameter tuning can prove beneficial
 
 \newpage
 

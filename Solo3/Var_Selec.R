@@ -150,6 +150,7 @@ test_df_X    <- full_df %>% filter(TYPE %in% c('TEST')) %>% select(-TYPE)
 tr_df_Y <- factor(c(tr_df_Y, cal_df_Y)-1, levels = c(0, 1),  labels = c('NORESPONSE', 'RESPONSE'))
 nrow(tr_df_X)==length(tr_df_Y)
 
+full_df_Y <- factor(c(tr_df_Y, test_df_Y)-1, levels = c(0, 1),  labels = c('NORESPONSE', 'RESPONSE'))
 # ------- Models -------------
 
 ## - RF -->
@@ -297,53 +298,25 @@ avnnetFit.cs <-
     preProc = c('center', 'scale'),
     verbose = T
   )
-# avnnet2Fit.cs <-
-#   train(
-#     x = tr_df_X,
-#     y = tr_df_Y,
-#     method = 'avNNet',
-#     metric = 'ROC',
-#     trControl = ctrl,
-#     ntree = ntree,
-#     tuneGrid = expand.grid(size = c(2,4,6), decay = c(0.3), bag = c(F)),
-#     preProc = c('center', 'scale'),
-#     verbose = T
-#   )
-# avnnet3Fit.cs <-
-#   train(
-#     x = tr_df_X,
-#     y = tr_df_Y,
-#     method = 'avNNet',
-#     metric = 'ROC',
-#     trControl = ctrl,
-#     ntree = ntree,
-#     tuneGrid = expand.grid(size = c(2), decay = c(0.4,.6), bag = c(F)),
-#     preProc = c('center', 'scale'),
-#     verbose = T
-  # )
+
 saveRDS(avnnetFit.cs,'avnnetFit.cs')
-# saveRDS(avnnet2Fit.cs,'avnnet2Fit.cs')
 avnnetFit.cs
 plot(avnnetFit.cs)
-avnnet2Fit.cs
-plot(avnnet2Fit.cs)
-post_process_rf(plot(avnnet2Fit.cs))
-stopCluster(cl)
-
 
 # Load models
 rfFit.cs = read_rds('rfFit.cs')
 rfFit.csy = read_rds('rfFit.csy')
 rfFit.nocs = read_rds('rfFit.nocs')
+rfFit.nocs2 = read_rds('rfFit.nocs2')
 nbFit.cs = read_rds('nbFit.cs')
-avnnet2Fit.cs = read_rds('avnnetFit.cs')
-
+avnnetFit.cs = read_rds('avnnetFit.cs')
 
 # Compare models
 model_list <- list(
   'RF - Std' = rfFit.cs,
   'RF - Std + YJ' = rfFit.csy,
   'RF - Raw' = rfFit.nocs,
+  'RF - Raw - LSS' = rfFit.nocs,
   'NB' = nbFit.cs,
   'Avg NNet' = avnnetFit.cs 
 )
@@ -362,8 +335,8 @@ plot_hists <- function(df,id){
 }
 
 result_df <- tibble(
-  name = c('RF - Std' ,'RF - Std + YJ',  'RF - Raw' , 'NB' , 'Avg NNet'),
-  result_obj = list(avnnet2Fit.cs,nbFit.cs,rfFit.cs,rfFit.csy,rfFit.nocs)
+  name = c('RF - Std' ,'RF - Std + YJ',  'RF - Raw' ,'RF - Raw - LSS' , 'NB' , 'Avg NNet'),
+  result_obj = list(rfFit.cs,rfFit.csy,rfFit.nocs,rfFit.nocs2, nbFit.cs,avnnetFit.cs)
 )
 result_df$probs <- get_probs(result_df$result_obj, test_df_X)
 
@@ -401,9 +374,15 @@ for (position in 1:nrow(grid)) {
   grid[position,'Kappa'] = (f_(grid$p_seq[position], grid$model_num[position],'Kappa'))
 }
 grid
-xyplot(Accuracy+Kappa~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name),abline=list(v=0.4,lty=2))
+xyplot(Accuracy+Kappa~p_seq,grid,type='b',groups=model_num,lwd=2,cex=1.5,auto.key=list(columns=5,text=result_df$name),abline=list(v=0.5,lty=2))
 
-q = factor((result_df[result_df$name=='NB', 'probs'][[1]][[1]][, 2]) > .4, c(F, T), labels = c('NORESPONSE', 'RESPONSE'))
+q = factor((result_df[result_df$name=='RF - Raw - LSS', 'probs'][[1]][[1]][, 2]) > .5, c(F, T), labels = c('NORESPONSE', 'RESPONSE'))
 confusionMatrix(data = q,
                 reference = test_df_Y,
+                positive = 'RESPONSE')
+
+
+full_yhat <- predict(rfFit.nocs2, full_df)
+confusionMatrix(data = full_yhat,
+                reference = full_df_Y,
                 positive = 'RESPONSE')
